@@ -229,10 +229,13 @@ class NeakasaAPI {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
             });
-            if (response.data.success !== 'true' || response.data.data.successful !== 'true') {
-                throw new NeakasaAuthError('Failed to get SID');
+            if (response.data.success !== 'true') {
+                throw new NeakasaAuthError(`Failed to get SID: ${response.data.errorMsg}`);
             }
-            return response.data.data.sid;
+            if (response.data.data.successful !== 'true') {
+                throw new NeakasaAuthError(`Failed to get SID: ${response.data.data.message}`);
+            }
+            return response.data.data.data.loginSuccessResult.sid;
         }
         catch (error) {
             throw new NeakasaAPIError(`Failed to get SID: ${error.message}`);
@@ -242,19 +245,34 @@ class NeakasaAPI {
         const client = new client_1.IoTClient({
             appKey: this.appKey,
             appSecret: this.appSecret,
-            domain: this.oaApiGatewayEndpoint,
+            domain: this.apiGatewayEndpoint,
         });
         const body = {
-            sid: sid,
+            version: '1.0',
+            params: {
+                request: {
+                    authCode: sid,
+                    accountType: 'OA_SESSION',
+                    appKey: this.appKey,
+                },
+            },
+            request: {
+                apiVer: '1.0.4',
+                language: this.language,
+            },
         };
         try {
-            const response = await client.doRequestRaw('/api/prd/account/getiottoken.json', body);
-            if (response.success !== 'true' || response.data.successful !== 'true') {
-                throw new NeakasaAuthError('Failed to get IoT token');
+            const response = await client.doRequest('/account/createSessionByAuthCode', body);
+            if (response.code !== 200) {
+                this.connected = false;
+                throw new NeakasaAuthError(`Failed to get IoT token: ${response.message}`);
             }
-            return response.data.data.iotToken;
+            return response.data.iotToken;
         }
         catch (error) {
+            if (error instanceof NeakasaAuthError) {
+                throw error;
+            }
             throw new NeakasaAPIError(`Failed to get IoT token: ${error.message}`);
         }
     }
