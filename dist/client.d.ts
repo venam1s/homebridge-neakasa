@@ -24,6 +24,6 @@ export declare class IoTClient {
     private getContentMD5;
     private getSignature;
     doRequest(pathname: string, body: IoTApiRequest): Promise<any>;
-    doRequestRaw(pathname: string, body: Record<string, any>): Promise<any>;
+    doRequestRaw(pathname: string, body: Record<string, any>, extraHeaders?: Record<string, string>): Promise<any>;
 }
 //# sourceMappingURL=client.d.ts.map

@@ -102,7 +102,7 @@ class IoTClient {
             throw new Error(`API request failed: ${error.message}`);
         }
     }
-    async doRequestRaw(pathname, body) {
+    async doRequestRaw(pathname, body, extraHeaders) {
         const timestamp = Math.floor(Date.now() / 1000).toString();
         const nonce = this.getNonce();
         const date = this.getDateUTCString();
@@ -116,6 +116,7 @@ class IoTClient {
             'x-ca-timestamp': timestamp,
             'accept': 'application/json',
             'content-type': 'application/x-www-form-urlencoded',
+            ...extraHeaders,
         };
         const bodyItems = [];
         const bodyItemsForSignature = [];

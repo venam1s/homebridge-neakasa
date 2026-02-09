@@ -205,6 +205,12 @@ export class NeakasaAPI {
   }
 
   private async getSidByVid(vid: string): Promise<string> {
+    const client = new IoTClient({
+      appKey: this.appKey,
+      appSecret: this.appSecret,
+      domain: this.oaApiGatewayEndpoint!,
+    });
+
     const body = {
       loginByOauthRequest: {
         authCode: this.aliAuthToken,
@@ -215,28 +221,20 @@ export class NeakasaAPI {
     };
 
     try {
-      const response = await this.axiosInstance.post(
-        `https://${this.oaApiGatewayEndpoint}/api/prd/loginbyoauth.json`,
-        new URLSearchParams({
-          loginByOauthRequest: JSON.stringify(body.loginByOauthRequest),
-        }).toString(),
-        {
-          headers: {
-            'Vid': vid,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      );
+      const response = await client.doRequestRaw('/api/prd/loginbyoauth.json', body, { 'Vid': vid });
 
-      if (response.data.success !== 'true') {
-        throw new NeakasaAuthError(`Failed to get SID: ${response.data.errorMsg}`);
+      if (response.success !== 'true') {
+        throw new NeakasaAuthError(`Failed to get SID: ${response.errorMsg}`);
       }
-      if (response.data.data.successful !== 'true') {
-        throw new NeakasaAuthError(`Failed to get SID: ${response.data.data.message}`);
+      if (response.data.successful !== 'true') {
+        throw new NeakasaAuthError(`Failed to get SID: ${response.data.message}`);
       }
 
-      return response.data.data.data.loginSuccessResult.sid;
+      return response.data.data.loginSuccessResult.sid;
     } catch (error: any) {
+      if (error instanceof NeakasaAuthError) {
+        throw error;
+      }
       throw new NeakasaAPIError(`Failed to get SID: ${error.message}`);
     }
   }

@@ -99,7 +99,7 @@ export class IoTClient {
     }
   }
 
-  async doRequestRaw(pathname: string, body: Record<string, any>): Promise<any> {
+  async doRequestRaw(pathname: string, body: Record<string, any>, extraHeaders?: Record<string, string>): Promise<any> {
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const nonce = this.getNonce();
     const date = this.getDateUTCString();
@@ -114,6 +114,7 @@ export class IoTClient {
       'x-ca-timestamp': timestamp,
       'accept': 'application/json',
       'content-type': 'application/x-www-form-urlencoded',
+      ...extraHeaders,
     };
 
     // Build form body
