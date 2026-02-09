@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { NeakasaPlatform } from './platform';
-import { DeviceData, BucketStatus, SandLevel, BinState } from './types';
+import { DeviceData, SandLevel } from './types';
 
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();

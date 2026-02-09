@@ -84,27 +84,10 @@ export interface DeviceData {
     cat_list: CatInfo[];
     record_list: CatRecord[];
 }
-export declare const BucketStatus: {
-    readonly IDLE: 0;
-    readonly CLEANING_1: 1;
-    readonly CLEANING_2: 2;
-    readonly LEVELING: 3;
-    readonly FLIPOVER: 4;
-    readonly CAT_PRESENT: 5;
-    readonly PAUSED: 6;
-    readonly SIDE_BIN_MISSING: 7;
-    readonly UNKNOWN: 8;
-    readonly CLEANING_INTERRUPTED: 9;
-};
 export declare const SandLevel: {
     readonly INSUFFICIENT: 0;
     readonly MODERATE: 1;
     readonly SUFFICIENT: 2;
     readonly OVERFILLED: 3;
-};
-export declare const BinState: {
-    readonly NORMAL: 0;
-    readonly FULL: 1;
-    readonly MISSING: 2;
 };
 //# sourceMappingURL=types.d.ts.map

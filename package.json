@@ -6,10 +6,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/YOUR_USERNAME/homebridge-neakasa.git"
+    "url": "git://github.com/smithmarcw/homebridge-neakasa.git"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/homebridge-neakasa/issues"
+    "url": "https://github.com/smithmarcw/homebridge-neakasa/issues"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -30,8 +30,7 @@
     "pet"
   ],
   "dependencies": {
-    "axios": "^1.6.0",
-    "crypto": "^1.0.1"
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

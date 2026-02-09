@@ -212,11 +212,6 @@ class NeakasaAPI {
         }
     }
     async getSidByVid(vid) {
-        const client = new client_1.IoTClient({
-            appKey: this.appKey,
-            appSecret: this.appSecret,
-            domain: this.oaApiGatewayEndpoint,
-        });
         const body = {
             loginByOauthRequest: {
                 authCode: this.aliAuthToken,

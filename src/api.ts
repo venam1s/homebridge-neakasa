@@ -205,12 +205,6 @@ export class NeakasaAPI {
   }
 
   private async getSidByVid(vid: string): Promise<string> {
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.oaApiGatewayEndpoint!,
-    });
-
     const body = {
       loginByOauthRequest: {
         authCode: this.aliAuthToken,

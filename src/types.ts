@@ -98,19 +98,6 @@ export interface DeviceData {
   record_list: CatRecord[];
 }
 
-export const BucketStatus = {
-  IDLE: 0,
-  CLEANING_1: 1,
-  CLEANING_2: 2,
-  LEVELING: 3,
-  FLIPOVER: 4,
-  CAT_PRESENT: 5,
-  PAUSED: 6,
-  SIDE_BIN_MISSING: 7,
-  UNKNOWN: 8,
-  CLEANING_INTERRUPTED: 9,
-} as const;
-
 export const SandLevel = {
   INSUFFICIENT: 0,
   MODERATE: 1,
@@ -118,8 +105,3 @@ export const SandLevel = {
   OVERFILLED: 3,
 } as const;
 
-export const BinState = {
-  NORMAL: 0,
-  FULL: 1,
-  MISSING: 2,
-} as const;
