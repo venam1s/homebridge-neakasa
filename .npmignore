@@ -2,9 +2,8 @@ src/
 tsconfig.json
 nodemon.json
 .eslintrc
-.gitignore
+*.log
+*.tgz
 .git/
 .vscode/
 .idea/
-*.log
-*.tgz
