@@ -46,9 +46,16 @@ export class IoTClient {
   }
 
   private getSignature(method: string, accept: string, contentMD5: string, contentType: string, date: string, headers: Record<string, string>, pathname: string): string {
-    const headerKeys = Object.keys(headers).filter(k => k.startsWith('x-ca-')).sort();
+    const excludeHeaders = new Set([
+      'x-ca-signature', 'x-ca-signature-headers', 'accept', 'content-md5',
+      'content-type', 'date', 'host', 'user-agent', 'token',
+    ]);
+    const headerKeys = Object.keys(headers).filter(k => !excludeHeaders.has(k)).sort();
     const headerString = headerKeys.map(k => `${k}:${headers[k]}`).join('\n');
-    
+
+    // Tell the server which headers are included in the signature
+    headers['x-ca-signature-headers'] = headerKeys.join(',');
+
     const stringToSign = [
       method,
       accept,

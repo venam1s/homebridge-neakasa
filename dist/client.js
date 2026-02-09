@@ -58,8 +58,13 @@ class IoTClient {
         return crypto.createHash('md5').update(content).digest('base64');
     }
     getSignature(method, accept, contentMD5, contentType, date, headers, pathname) {
-        const headerKeys = Object.keys(headers).filter(k => k.startsWith('x-ca-')).sort();
+        const excludeHeaders = new Set([
+            'x-ca-signature', 'x-ca-signature-headers', 'accept', 'content-md5',
+            'content-type', 'date', 'host', 'user-agent', 'token',
+        ]);
+        const headerKeys = Object.keys(headers).filter(k => !excludeHeaders.has(k)).sort();
         const headerString = headerKeys.map(k => `${k}:${headers[k]}`).join('\n');
+        headers['x-ca-signature-headers'] = headerKeys.join(',');
         const stringToSign = [
             method,
             accept,
