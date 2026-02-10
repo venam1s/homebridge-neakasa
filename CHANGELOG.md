@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-02-09
+
+### Fixed
+- Service naming: add `ConfiguredName` characteristic so HomeKit shows distinct tile labels instead of all "Neakasa M1"
+
+### Changed
+- Simplified default accessories to 6 core items: Waste Bin Full, Auto Clean, Clean Now, Level Now, Status, Litter Level
+- All other switches and sensors are now opt-in via config (off by default)
+- Config UI split into "Optional Switches" and "Optional Sensors" sections
+- Status sensor and Litter Level are now always-on core services
+
 ## [1.1.0] - 2026-02-09
 
 ### Fixed

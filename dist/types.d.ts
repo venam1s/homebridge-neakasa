@@ -5,7 +5,13 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
     pollInterval?: number;
     debug?: boolean;
     deviceName?: string;
-    showStatusSensor?: boolean;
+    showChildLock?: boolean;
+    showAutoBury?: boolean;
+    showAutoLevel?: boolean;
+    showSilentMode?: boolean;
+    showUnstoppableCycle?: boolean;
+    showAutoRecovery?: boolean;
+    showYoungCatMode?: boolean;
     showBinStateSensor?: boolean;
     showWifiSensor?: boolean;
     showCatSensors?: boolean;

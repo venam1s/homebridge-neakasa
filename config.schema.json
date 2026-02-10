@@ -40,29 +40,58 @@
         "type": "boolean",
         "default": false
       },
-      "showStatusSensor": {
-        "title": "Show Status Sensor",
+      "showChildLock": {
+        "title": "Child Lock Switch",
         "type": "boolean",
-        "default": true,
-        "description": "Show a contact sensor indicating the current device status (Idle, Cleaning, etc.)"
+        "default": false
+      },
+      "showAutoBury": {
+        "title": "Auto Bury Switch",
+        "type": "boolean",
+        "default": false
+      },
+      "showAutoLevel": {
+        "title": "Auto Level Switch",
+        "type": "boolean",
+        "default": false
+      },
+      "showSilentMode": {
+        "title": "Silent Mode Switch",
+        "type": "boolean",
+        "default": false
+      },
+      "showUnstoppableCycle": {
+        "title": "Unstoppable Cycle Switch",
+        "type": "boolean",
+        "default": false
+      },
+      "showAutoRecovery": {
+        "title": "Auto Recovery Switch",
+        "type": "boolean",
+        "default": false
+      },
+      "showYoungCatMode": {
+        "title": "Young Cat Mode Switch",
+        "type": "boolean",
+        "default": false
       },
       "showBinStateSensor": {
-        "title": "Show Bin State Sensor",
-        "type": "boolean",
-        "default": true,
-        "description": "Show a leak sensor indicating waste bin state (Normal, Full, Missing)"
-      },
-      "showWifiSensor": {
-        "title": "Show WiFi Signal Sensor",
+        "title": "Bin State Sensor",
         "type": "boolean",
         "default": false,
-        "description": "Show a humidity sensor repurposed to display WiFi signal strength"
+        "description": "Leak sensor that alerts when waste bin is full or missing"
+      },
+      "showWifiSensor": {
+        "title": "WiFi Signal Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Shows WiFi signal strength as a percentage"
       },
       "showCatSensors": {
-        "title": "Show Cat Weight Sensors",
+        "title": "Cat Weight Sensors",
         "type": "boolean",
-        "default": true,
-        "description": "Show per-cat weight sensors (one per registered cat)"
+        "default": false,
+        "description": "Per-cat weight sensors (one per registered cat)"
       }
     }
   },
@@ -97,10 +126,23 @@
     },
     {
       "type": "fieldset",
+      "title": "Optional Switches",
+      "expandable": true,
+      "items": [
+        "showChildLock",
+        "showAutoBury",
+        "showAutoLevel",
+        "showSilentMode",
+        "showUnstoppableCycle",
+        "showAutoRecovery",
+        "showYoungCatMode"
+      ]
+    },
+    {
+      "type": "fieldset",
       "title": "Optional Sensors",
       "expandable": true,
       "items": [
-        "showStatusSensor",
         "showBinStateSensor",
         "showWifiSensor",
         "showCatSensors"

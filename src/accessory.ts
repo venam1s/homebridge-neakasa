@@ -25,47 +25,27 @@ export class NeakasaAccessory {
     this.setupServices();
   }
 
+  private setServiceName(service: Service, name: string): void {
+    service.setCharacteristic(this.platform.Characteristic.Name, name);
+    service.setCharacteristic(this.platform.Characteristic.ConfiguredName, name);
+  }
+
   private setupServices(): void {
-    // Filter Maintenance (for sand level)
-    const filterService = this.accessory.getService(this.platform.Service.FilterMaintenance) ||
-      this.accessory.addService(this.platform.Service.FilterMaintenance, 'Litter Level', 'sand-level');
-    filterService.setCharacteristic(this.platform.Characteristic.Name, 'Litter Level');
-    this.services.set('filter', filterService);
+    // === CORE SERVICES (always shown) ===
 
     // Occupancy Sensor (bin full)
     const binSensor = this.accessory.getService('bin-full') ||
       this.accessory.addService(this.platform.Service.OccupancySensor, 'Waste Bin Full', 'bin-full');
-    binSensor.setCharacteristic(this.platform.Characteristic.Name, 'Waste Bin Full');
+    this.setServiceName(binSensor, 'Waste Bin Full');
     this.services.set('binFull', binSensor);
 
     // Switch: Auto Clean
     this.addSwitch('autoClean', 'Auto Clean', 'auto-clean', this.setAutoClean, this.getAutoClean);
 
-    // Switch: Child Lock
-    this.addSwitch('childLock', 'Child Lock', 'child-lock', this.setChildLock, this.getChildLock);
-
-    // Switch: Auto Bury
-    this.addSwitch('autoBury', 'Auto Bury', 'auto-bury', this.setAutoBury, this.getAutoBury);
-
-    // Switch: Auto Level
-    this.addSwitch('autoLevel', 'Auto Level', 'auto-level', this.setAutoLevel, this.getAutoLevel);
-
-    // Switch: Silent Mode
-    this.addSwitch('silentMode', 'Silent Mode', 'silent-mode', this.setSilentMode, this.getSilentMode);
-
-    // Switch: Unstoppable Cycle
-    this.addSwitch('unstoppable', 'Unstoppable Cycle', 'unstoppable-cycle', this.setUnstoppableCycle, this.getUnstoppableCycle);
-
-    // Switch: Auto Recovery
-    this.addSwitch('autoRecovery', 'Auto Recovery', 'auto-recovery', this.setAutoRecovery, this.getAutoRecovery);
-
-    // Switch: Young Cat Mode
-    this.addSwitch('youngCatMode', 'Young Cat Mode', 'young-cat-mode', this.setYoungCatMode, this.getYoungCatMode);
-
     // Button: Clean Now (stateless)
     const cleanSwitch = this.accessory.getService('clean-now') ||
       this.accessory.addService(this.platform.Service.Switch, 'Clean Now', 'clean-now');
-    cleanSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Clean Now');
+    this.setServiceName(cleanSwitch, 'Clean Now');
     cleanSwitch.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.cleanNow.bind(this))
       .onGet(() => false);
@@ -74,37 +54,62 @@ export class NeakasaAccessory {
     // Button: Level Now (stateless)
     const levelSwitch = this.accessory.getService('level-now') ||
       this.accessory.addService(this.platform.Service.Switch, 'Level Now', 'level-now');
-    levelSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Level Now');
+    this.setServiceName(levelSwitch, 'Level Now');
     levelSwitch.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.levelNow.bind(this))
       .onGet(() => false);
     this.services.set('level', levelSwitch);
 
-    // Optional: Current Status sensor (ContactSensor)
-    if (this.config.showStatusSensor !== false) {
-      const statusSensor = this.accessory.getService('device-status') ||
-        this.accessory.addService(this.platform.Service.ContactSensor, 'Status', 'device-status');
-      statusSensor.setCharacteristic(this.platform.Characteristic.Name, 'Status');
-      this.services.set('status', statusSensor);
-    } else {
-      this.removeServiceIfExists('device-status');
-    }
+    // Status sensor (ContactSensor)
+    const statusSensor = this.accessory.getService('device-status') ||
+      this.accessory.addService(this.platform.Service.ContactSensor, 'Status', 'device-status');
+    this.setServiceName(statusSensor, 'Status');
+    this.services.set('status', statusSensor);
 
-    // Optional: Bin State sensor (LeakSensor)
-    if (this.config.showBinStateSensor !== false) {
+    // Litter Level (FilterMaintenance)
+    const filterService = this.accessory.getService(this.platform.Service.FilterMaintenance) ||
+      this.accessory.addService(this.platform.Service.FilterMaintenance, 'Litter Level', 'sand-level');
+    this.setServiceName(filterService, 'Litter Level');
+    this.services.set('filter', filterService);
+
+    // === OPTIONAL SWITCHES (off by default) ===
+
+    this.addOptionalSwitch('childLock', 'Child Lock', 'child-lock',
+      this.config.showChildLock, this.setChildLock, this.getChildLock);
+
+    this.addOptionalSwitch('autoBury', 'Auto Bury', 'auto-bury',
+      this.config.showAutoBury, this.setAutoBury, this.getAutoBury);
+
+    this.addOptionalSwitch('autoLevel', 'Auto Level', 'auto-level',
+      this.config.showAutoLevel, this.setAutoLevel, this.getAutoLevel);
+
+    this.addOptionalSwitch('silentMode', 'Silent Mode', 'silent-mode',
+      this.config.showSilentMode, this.setSilentMode, this.getSilentMode);
+
+    this.addOptionalSwitch('unstoppable', 'Unstoppable Cycle', 'unstoppable-cycle',
+      this.config.showUnstoppableCycle, this.setUnstoppableCycle, this.getUnstoppableCycle);
+
+    this.addOptionalSwitch('autoRecovery', 'Auto Recovery', 'auto-recovery',
+      this.config.showAutoRecovery, this.setAutoRecovery, this.getAutoRecovery);
+
+    this.addOptionalSwitch('youngCatMode', 'Young Cat Mode', 'young-cat-mode',
+      this.config.showYoungCatMode, this.setYoungCatMode, this.getYoungCatMode);
+
+    // === OPTIONAL SENSORS (off by default) ===
+
+    if (this.config.showBinStateSensor === true) {
       const binStateSensor = this.accessory.getService('bin-state') ||
         this.accessory.addService(this.platform.Service.LeakSensor, 'Bin State', 'bin-state');
-      binStateSensor.setCharacteristic(this.platform.Characteristic.Name, 'Bin State');
+      this.setServiceName(binStateSensor, 'Bin State');
       this.services.set('binState', binStateSensor);
     } else {
       this.removeServiceIfExists('bin-state');
     }
 
-    // Optional: WiFi Signal sensor (HumiditySensor)
     if (this.config.showWifiSensor === true) {
       const wifiSensor = this.accessory.getService('wifi-signal') ||
         this.accessory.addService(this.platform.Service.HumiditySensor, 'WiFi Signal', 'wifi-signal');
-      wifiSensor.setCharacteristic(this.platform.Characteristic.Name, 'WiFi Signal');
+      this.setServiceName(wifiSensor, 'WiFi Signal');
       this.services.set('wifi', wifiSensor);
     } else {
       this.removeServiceIfExists('wifi-signal');
@@ -120,11 +125,26 @@ export class NeakasaAccessory {
   ): void {
     const service = this.accessory.getService(subType) ||
       this.accessory.addService(this.platform.Service.Switch, name, subType);
-    service.setCharacteristic(this.platform.Characteristic.Name, name);
+    this.setServiceName(service, name);
     service.getCharacteristic(this.platform.Characteristic.On)
       .onSet(setter.bind(this))
       .onGet(getter.bind(this));
     this.services.set(key, service);
+  }
+
+  private addOptionalSwitch(
+    key: string,
+    name: string,
+    subType: string,
+    enabled: boolean | undefined,
+    setter: (value: CharacteristicValue) => Promise<void>,
+    getter: () => Promise<CharacteristicValue>,
+  ): void {
+    if (enabled === true) {
+      this.addSwitch(key, name, subType, setter, getter);
+    } else {
+      this.removeServiceIfExists(subType);
+    }
   }
 
   private removeServiceIfExists(subType: string): void {
@@ -135,7 +155,6 @@ export class NeakasaAccessory {
   }
 
   private rssiToPercent(rssi: number): number {
-    // Convert dBm to 0-100% quality
     if (rssi >= -50) {
       return 100;
     }
@@ -148,7 +167,7 @@ export class NeakasaAccessory {
   async updateData(data: DeviceData): Promise<void> {
     this.deviceData = data;
 
-    // Update Filter Maintenance (sand level)
+    // Core: Litter Level
     const filterService = this.services.get('filter')!;
     const changeIndication = data.sandLevelState === SandLevel.INSUFFICIENT ?
       this.platform.Characteristic.FilterChangeIndication.CHANGE_FILTER :
@@ -156,7 +175,7 @@ export class NeakasaAccessory {
     filterService.updateCharacteristic(this.platform.Characteristic.FilterChangeIndication, changeIndication);
     filterService.updateCharacteristic(this.platform.Characteristic.FilterLifeLevel, data.sandLevelPercent);
 
-    // Update Bin Full sensor
+    // Core: Waste Bin Full
     const binSensor = this.services.get('binFull')!;
     binSensor.updateCharacteristic(
       this.platform.Characteristic.OccupancyDetected,
@@ -165,35 +184,33 @@ export class NeakasaAccessory {
         this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
     );
 
-    // Update switches
+    // Core: Auto Clean
     this.services.get('autoClean')!.updateCharacteristic(this.platform.Characteristic.On, data.cleanCfg?.active === 1);
-    this.services.get('childLock')!.updateCharacteristic(this.platform.Characteristic.On, data.childLockOnOff);
-    this.services.get('autoBury')!.updateCharacteristic(this.platform.Characteristic.On, data.autoBury);
-    this.services.get('autoLevel')!.updateCharacteristic(this.platform.Characteristic.On, data.autoLevel);
-    this.services.get('silentMode')!.updateCharacteristic(this.platform.Characteristic.On, data.silentMode);
-    this.services.get('unstoppable')!.updateCharacteristic(this.platform.Characteristic.On, data.bIntrptRangeDet);
-    this.services.get('autoRecovery')!.updateCharacteristic(this.platform.Characteristic.On, data.autoForceInit);
-    this.services.get('youngCatMode')!.updateCharacteristic(this.platform.Characteristic.On, data.youngCatMode);
 
-    // Update optional: Current Status sensor
-    const statusSensor = this.services.get('status');
-    if (statusSensor) {
-      // ContactSensor: CONTACT_DETECTED (0) = idle, CONTACT_NOT_DETECTED (1) = active/busy
-      const isActive = data.bucketStatus !== 0;
-      statusSensor.updateCharacteristic(
-        this.platform.Characteristic.ContactSensorState,
-        isActive ?
-          this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
-          this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
-      );
-      const statusName = BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
-      statusSensor.updateCharacteristic(this.platform.Characteristic.Name, statusName);
-    }
+    // Core: Status sensor
+    const statusSensor = this.services.get('status')!;
+    const isActive = data.bucketStatus !== 0;
+    statusSensor.updateCharacteristic(
+      this.platform.Characteristic.ContactSensorState,
+      isActive ?
+        this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+        this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
+    );
+    const statusName = BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
+    statusSensor.updateCharacteristic(this.platform.Characteristic.Name, statusName);
 
-    // Update optional: Bin State sensor
+    // Optional switches (only update if service exists)
+    this.services.get('childLock')?.updateCharacteristic(this.platform.Characteristic.On, data.childLockOnOff);
+    this.services.get('autoBury')?.updateCharacteristic(this.platform.Characteristic.On, data.autoBury);
+    this.services.get('autoLevel')?.updateCharacteristic(this.platform.Characteristic.On, data.autoLevel);
+    this.services.get('silentMode')?.updateCharacteristic(this.platform.Characteristic.On, data.silentMode);
+    this.services.get('unstoppable')?.updateCharacteristic(this.platform.Characteristic.On, data.bIntrptRangeDet);
+    this.services.get('autoRecovery')?.updateCharacteristic(this.platform.Characteristic.On, data.autoForceInit);
+    this.services.get('youngCatMode')?.updateCharacteristic(this.platform.Characteristic.On, data.youngCatMode);
+
+    // Optional: Bin State sensor
     const binStateSensor = this.services.get('binState');
     if (binStateSensor) {
-      // LeakDetected when bin is full or missing
       const leakDetected = data.room_of_bin !== 0;
       binStateSensor.updateCharacteristic(
         this.platform.Characteristic.LeakDetected,
@@ -205,15 +222,15 @@ export class NeakasaAccessory {
       binStateSensor.updateCharacteristic(this.platform.Characteristic.Name, binStateName);
     }
 
-    // Update optional: WiFi Signal sensor
+    // Optional: WiFi Signal sensor
     const wifiSensor = this.services.get('wifi');
     if (wifiSensor) {
       const signalPercent = this.rssiToPercent(data.wifiRssi);
       wifiSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, signalPercent);
     }
 
-    // Update optional: Cat Weight sensors
-    if (this.config.showCatSensors !== false && data.cat_list && data.cat_list.length > 0) {
+    // Optional: Cat Weight sensors
+    if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
       this.updateCatSensors(data);
     }
 
@@ -229,7 +246,6 @@ export class NeakasaAccessory {
       let catSensor = this.services.get(subType);
 
       if (!catSensor) {
-        // Create sensor for this cat
         const existingService = this.accessory.getService(subType);
         if (existingService) {
           catSensor = existingService;
@@ -240,19 +256,16 @@ export class NeakasaAccessory {
             subType,
           );
         }
-        catSensor.setCharacteristic(this.platform.Characteristic.Name, cat.name);
+        this.setServiceName(catSensor, cat.name);
         this.services.set(subType, catSensor);
       }
 
-      // Find most recent record for this cat
       const catRecords = data.record_list
         .filter(r => r.cat_id === cat.id)
         .sort((a, b) => b.end_time - a.end_time);
 
       if (catRecords.length > 0) {
         const latestRecord = catRecords[0];
-        // Use humidity characteristic to display weight (kg)
-        // Clamp to 0-100 range for HomeKit
         const weight = Math.min(100, Math.max(0, latestRecord.weight));
         catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, weight);
       }

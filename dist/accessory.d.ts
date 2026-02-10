@@ -10,8 +10,10 @@ export declare class NeakasaAccessory {
     private deviceData?;
     private readonly config;
     constructor(platform: NeakasaPlatform, accessory: PlatformAccessory, iotId: string, deviceName: string, config: NeakasaPlatformConfig);
+    private setServiceName;
     private setupServices;
     private addSwitch;
+    private addOptionalSwitch;
     private removeServiceIfExists;
     private rssiToPercent;
     updateData(data: DeviceData): Promise<void>;
