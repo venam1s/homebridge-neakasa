@@ -3,12 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NeakasaAccessory = void 0;
 const types_1 = require("./types");
 class NeakasaAccessory {
-    constructor(platform, accessory, iotId, deviceName) {
+    constructor(platform, accessory, iotId, deviceName, config) {
         this.platform = platform;
         this.accessory = accessory;
         this.iotId = iotId;
         this.deviceName = deviceName;
         this.services = new Map();
+        this.config = config;
         this.accessory.getService(this.platform.Service.AccessoryInformation)
             .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Neakasa')
             .setCharacteristic(this.platform.Characteristic.Model, 'M1')
@@ -21,51 +22,17 @@ class NeakasaAccessory {
         filterService.setCharacteristic(this.platform.Characteristic.Name, 'Litter Level');
         this.services.set('filter', filterService);
         const binSensor = this.accessory.getService('bin-full') ||
-            this.accessory.addService(this.platform.Service.OccupancySensor, 'Bin Full', 'bin-full');
-        binSensor.setCharacteristic(this.platform.Characteristic.Name, 'Bin Full');
+            this.accessory.addService(this.platform.Service.OccupancySensor, 'Waste Bin Full', 'bin-full');
+        binSensor.setCharacteristic(this.platform.Characteristic.Name, 'Waste Bin Full');
         this.services.set('binFull', binSensor);
-        const autoCleanSwitch = this.accessory.getService('auto-clean') ||
-            this.accessory.addService(this.platform.Service.Switch, 'Auto Clean', 'auto-clean');
-        autoCleanSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Auto Clean');
-        autoCleanSwitch.getCharacteristic(this.platform.Characteristic.On)
-            .onSet(this.setAutoClean.bind(this))
-            .onGet(this.getAutoClean.bind(this));
-        this.services.set('autoClean', autoCleanSwitch);
-        const childLockSwitch = this.accessory.getService('child-lock') ||
-            this.accessory.addService(this.platform.Service.Switch, 'Child Lock', 'child-lock');
-        childLockSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Child Lock');
-        childLockSwitch.getCharacteristic(this.platform.Characteristic.On)
-            .onSet(this.setChildLock.bind(this))
-            .onGet(this.getChildLock.bind(this));
-        this.services.set('childLock', childLockSwitch);
-        const autoBurySwitch = this.accessory.getService('auto-bury') ||
-            this.accessory.addService(this.platform.Service.Switch, 'Auto Cover', 'auto-bury');
-        autoBurySwitch.setCharacteristic(this.platform.Characteristic.Name, 'Auto Cover');
-        autoBurySwitch.getCharacteristic(this.platform.Characteristic.On)
-            .onSet(this.setAutoBury.bind(this))
-            .onGet(this.getAutoBury.bind(this));
-        this.services.set('autoBury', autoBurySwitch);
-        const autoLevelSwitch = this.accessory.getService('auto-level') ||
-            this.accessory.addService(this.platform.Service.Switch, 'Auto Leveling', 'auto-level');
-        autoLevelSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Auto Leveling');
-        autoLevelSwitch.getCharacteristic(this.platform.Characteristic.On)
-            .onSet(this.setAutoLevel.bind(this))
-            .onGet(this.getAutoLevel.bind(this));
-        this.services.set('autoLevel', autoLevelSwitch);
-        const silentModeSwitch = this.accessory.getService('silent-mode') ||
-            this.accessory.addService(this.platform.Service.Switch, 'Silent Mode', 'silent-mode');
-        silentModeSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Silent Mode');
-        silentModeSwitch.getCharacteristic(this.platform.Characteristic.On)
-            .onSet(this.setSilentMode.bind(this))
-            .onGet(this.getSilentMode.bind(this));
-        this.services.set('silentMode', silentModeSwitch);
-        const unstoppableSwitch = this.accessory.getService('unstoppable-cycle') ||
-            this.accessory.addService(this.platform.Service.Switch, 'Unstoppable Cycle', 'unstoppable-cycle');
-        unstoppableSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Unstoppable Cycle');
-        unstoppableSwitch.getCharacteristic(this.platform.Characteristic.On)
-            .onSet(this.setUnstoppableCycle.bind(this))
-            .onGet(this.getUnstoppableCycle.bind(this));
-        this.services.set('unstoppable', unstoppableSwitch);
+        this.addSwitch('autoClean', 'Auto Clean', 'auto-clean', this.setAutoClean, this.getAutoClean);
+        this.addSwitch('childLock', 'Child Lock', 'child-lock', this.setChildLock, this.getChildLock);
+        this.addSwitch('autoBury', 'Auto Bury', 'auto-bury', this.setAutoBury, this.getAutoBury);
+        this.addSwitch('autoLevel', 'Auto Level', 'auto-level', this.setAutoLevel, this.getAutoLevel);
+        this.addSwitch('silentMode', 'Silent Mode', 'silent-mode', this.setSilentMode, this.getSilentMode);
+        this.addSwitch('unstoppable', 'Unstoppable Cycle', 'unstoppable-cycle', this.setUnstoppableCycle, this.getUnstoppableCycle);
+        this.addSwitch('autoRecovery', 'Auto Recovery', 'auto-recovery', this.setAutoRecovery, this.getAutoRecovery);
+        this.addSwitch('youngCatMode', 'Young Cat Mode', 'young-cat-mode', this.setYoungCatMode, this.getYoungCatMode);
         const cleanSwitch = this.accessory.getService('clean-now') ||
             this.accessory.addService(this.platform.Service.Switch, 'Clean Now', 'clean-now');
         cleanSwitch.setCharacteristic(this.platform.Characteristic.Name, 'Clean Now');
@@ -80,6 +47,57 @@ class NeakasaAccessory {
             .onSet(this.levelNow.bind(this))
             .onGet(() => false);
         this.services.set('level', levelSwitch);
+        if (this.config.showStatusSensor !== false) {
+            const statusSensor = this.accessory.getService('device-status') ||
+                this.accessory.addService(this.platform.Service.ContactSensor, 'Status', 'device-status');
+            statusSensor.setCharacteristic(this.platform.Characteristic.Name, 'Status');
+            this.services.set('status', statusSensor);
+        }
+        else {
+            this.removeServiceIfExists('device-status');
+        }
+        if (this.config.showBinStateSensor !== false) {
+            const binStateSensor = this.accessory.getService('bin-state') ||
+                this.accessory.addService(this.platform.Service.LeakSensor, 'Bin State', 'bin-state');
+            binStateSensor.setCharacteristic(this.platform.Characteristic.Name, 'Bin State');
+            this.services.set('binState', binStateSensor);
+        }
+        else {
+            this.removeServiceIfExists('bin-state');
+        }
+        if (this.config.showWifiSensor === true) {
+            const wifiSensor = this.accessory.getService('wifi-signal') ||
+                this.accessory.addService(this.platform.Service.HumiditySensor, 'WiFi Signal', 'wifi-signal');
+            wifiSensor.setCharacteristic(this.platform.Characteristic.Name, 'WiFi Signal');
+            this.services.set('wifi', wifiSensor);
+        }
+        else {
+            this.removeServiceIfExists('wifi-signal');
+        }
+    }
+    addSwitch(key, name, subType, setter, getter) {
+        const service = this.accessory.getService(subType) ||
+            this.accessory.addService(this.platform.Service.Switch, name, subType);
+        service.setCharacteristic(this.platform.Characteristic.Name, name);
+        service.getCharacteristic(this.platform.Characteristic.On)
+            .onSet(setter.bind(this))
+            .onGet(getter.bind(this));
+        this.services.set(key, service);
+    }
+    removeServiceIfExists(subType) {
+        const existing = this.accessory.getService(subType);
+        if (existing) {
+            this.accessory.removeService(existing);
+        }
+    }
+    rssiToPercent(rssi) {
+        if (rssi >= -50) {
+            return 100;
+        }
+        if (rssi <= -100) {
+            return 0;
+        }
+        return 2 * (rssi + 100);
     }
     async updateData(data) {
         this.deviceData = data;
@@ -99,7 +117,61 @@ class NeakasaAccessory {
         this.services.get('autoLevel').updateCharacteristic(this.platform.Characteristic.On, data.autoLevel);
         this.services.get('silentMode').updateCharacteristic(this.platform.Characteristic.On, data.silentMode);
         this.services.get('unstoppable').updateCharacteristic(this.platform.Characteristic.On, data.bIntrptRangeDet);
-        this.platform.log.debug(`Updated data for ${this.deviceName}: Sand ${data.sandLevelPercent}%, Status ${data.bucketStatus}`);
+        this.services.get('autoRecovery').updateCharacteristic(this.platform.Characteristic.On, data.autoForceInit);
+        this.services.get('youngCatMode').updateCharacteristic(this.platform.Characteristic.On, data.youngCatMode);
+        const statusSensor = this.services.get('status');
+        if (statusSensor) {
+            const isActive = data.bucketStatus !== 0;
+            statusSensor.updateCharacteristic(this.platform.Characteristic.ContactSensorState, isActive ?
+                this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+                this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED);
+            const statusName = types_1.BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
+            statusSensor.updateCharacteristic(this.platform.Characteristic.Name, statusName);
+        }
+        const binStateSensor = this.services.get('binState');
+        if (binStateSensor) {
+            const leakDetected = data.room_of_bin !== 0;
+            binStateSensor.updateCharacteristic(this.platform.Characteristic.LeakDetected, leakDetected ?
+                this.platform.Characteristic.LeakDetected.LEAK_DETECTED :
+                this.platform.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
+            const binStateName = types_1.BinState[data.room_of_bin] || `Unknown (${data.room_of_bin})`;
+            binStateSensor.updateCharacteristic(this.platform.Characteristic.Name, binStateName);
+        }
+        const wifiSensor = this.services.get('wifi');
+        if (wifiSensor) {
+            const signalPercent = this.rssiToPercent(data.wifiRssi);
+            wifiSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, signalPercent);
+        }
+        if (this.config.showCatSensors !== false && data.cat_list && data.cat_list.length > 0) {
+            this.updateCatSensors(data);
+        }
+        this.platform.log.debug(`Updated ${this.deviceName}: Status=${types_1.BucketStatus[data.bucketStatus] || data.bucketStatus}, ` +
+            `Sand=${data.sandLevelPercent}%, Bin=${types_1.BinState[data.room_of_bin] || data.room_of_bin}`);
+    }
+    updateCatSensors(data) {
+        for (const cat of data.cat_list) {
+            const subType = `cat-${cat.id}`;
+            let catSensor = this.services.get(subType);
+            if (!catSensor) {
+                const existingService = this.accessory.getService(subType);
+                if (existingService) {
+                    catSensor = existingService;
+                }
+                else {
+                    catSensor = this.accessory.addService(this.platform.Service.HumiditySensor, cat.name, subType);
+                }
+                catSensor.setCharacteristic(this.platform.Characteristic.Name, cat.name);
+                this.services.set(subType, catSensor);
+            }
+            const catRecords = data.record_list
+                .filter(r => r.cat_id === cat.id)
+                .sort((a, b) => b.end_time - a.end_time);
+            if (catRecords.length > 0) {
+                const latestRecord = catRecords[0];
+                const weight = Math.min(100, Math.max(0, latestRecord.weight));
+                catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, weight);
+            }
+        }
     }
     async setAutoClean(value) {
         const newValue = value;
@@ -107,7 +179,7 @@ class NeakasaAccessory {
             const cleanCfg = this.deviceData?.cleanCfg || { active: 0 };
             cleanCfg.active = newValue ? 1 : 0;
             await this.platform.neakasaApi.setDeviceProperties(this.iotId, { cleanCfg });
-            this.platform.log.info(`Set Auto Clean to ${newValue} for ${this.deviceName}`);
+            this.platform.log.info(`Set Auto Clean to ${newValue}`);
         }
         catch (error) {
             this.platform.log.error(`Failed to set Auto Clean: ${error}`);
@@ -121,7 +193,7 @@ class NeakasaAccessory {
         const newValue = value;
         try {
             await this.platform.neakasaApi.setDeviceProperties(this.iotId, { childLockOnOff: newValue ? 1 : 0 });
-            this.platform.log.info(`Set Child Lock to ${newValue} for ${this.deviceName}`);
+            this.platform.log.info(`Set Child Lock to ${newValue}`);
         }
         catch (error) {
             this.platform.log.error(`Failed to set Child Lock: ${error}`);
@@ -135,10 +207,10 @@ class NeakasaAccessory {
         const newValue = value;
         try {
             await this.platform.neakasaApi.setDeviceProperties(this.iotId, { autoBury: newValue ? 1 : 0 });
-            this.platform.log.info(`Set Auto Cover to ${newValue} for ${this.deviceName}`);
+            this.platform.log.info(`Set Auto Bury to ${newValue}`);
         }
         catch (error) {
-            this.platform.log.error(`Failed to set Auto Cover: ${error}`);
+            this.platform.log.error(`Failed to set Auto Bury: ${error}`);
             throw new this.platform.api.hap.HapStatusError(-70402);
         }
     }
@@ -149,10 +221,10 @@ class NeakasaAccessory {
         const newValue = value;
         try {
             await this.platform.neakasaApi.setDeviceProperties(this.iotId, { autoLevel: newValue ? 1 : 0 });
-            this.platform.log.info(`Set Auto Leveling to ${newValue} for ${this.deviceName}`);
+            this.platform.log.info(`Set Auto Level to ${newValue}`);
         }
         catch (error) {
-            this.platform.log.error(`Failed to set Auto Leveling: ${error}`);
+            this.platform.log.error(`Failed to set Auto Level: ${error}`);
             throw new this.platform.api.hap.HapStatusError(-70402);
         }
     }
@@ -163,7 +235,7 @@ class NeakasaAccessory {
         const newValue = value;
         try {
             await this.platform.neakasaApi.setDeviceProperties(this.iotId, { silentMode: newValue ? 1 : 0 });
-            this.platform.log.info(`Set Silent Mode to ${newValue} for ${this.deviceName}`);
+            this.platform.log.info(`Set Silent Mode to ${newValue}`);
         }
         catch (error) {
             this.platform.log.error(`Failed to set Silent Mode: ${error}`);
@@ -177,7 +249,7 @@ class NeakasaAccessory {
         const newValue = value;
         try {
             await this.platform.neakasaApi.setDeviceProperties(this.iotId, { bIntrptRangeDet: newValue ? 1 : 0 });
-            this.platform.log.info(`Set Unstoppable Cycle to ${newValue} for ${this.deviceName}`);
+            this.platform.log.info(`Set Unstoppable Cycle to ${newValue}`);
         }
         catch (error) {
             this.platform.log.error(`Failed to set Unstoppable Cycle: ${error}`);
@@ -186,6 +258,34 @@ class NeakasaAccessory {
     }
     async getUnstoppableCycle() {
         return this.deviceData?.bIntrptRangeDet || false;
+    }
+    async setAutoRecovery(value) {
+        const newValue = value;
+        try {
+            await this.platform.neakasaApi.setDeviceProperties(this.iotId, { autoForceInit: newValue ? 1 : 0 });
+            this.platform.log.info(`Set Auto Recovery to ${newValue}`);
+        }
+        catch (error) {
+            this.platform.log.error(`Failed to set Auto Recovery: ${error}`);
+            throw new this.platform.api.hap.HapStatusError(-70402);
+        }
+    }
+    async getAutoRecovery() {
+        return this.deviceData?.autoForceInit || false;
+    }
+    async setYoungCatMode(value) {
+        const newValue = value;
+        try {
+            await this.platform.neakasaApi.setDeviceProperties(this.iotId, { youngCatMode: newValue ? 1 : 0 });
+            this.platform.log.info(`Set Young Cat Mode to ${newValue}`);
+        }
+        catch (error) {
+            this.platform.log.error(`Failed to set Young Cat Mode: ${error}`);
+            throw new this.platform.api.hap.HapStatusError(-70402);
+        }
+    }
+    async getYoungCatMode() {
+        return this.deviceData?.youngCatMode || false;
     }
     async cleanNow(value) {
         if (value) {

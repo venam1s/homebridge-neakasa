@@ -40,6 +40,7 @@ class NeakasaPlatform {
             this.log.info('Successfully connected to Neakasa API');
             const devices = await this.neakasaApi.getDevices();
             this.log.info(`Found ${devices.length} device(s)`);
+            const displayName = this.config.deviceName || 'Neakasa M1';
             for (const device of devices) {
                 const uuid = this.api.hap.uuid.generate(device.iotId);
                 const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
@@ -47,14 +48,14 @@ class NeakasaPlatform {
                     this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
                     existingAccessory.context.device = device;
                     this.api.updatePlatformAccessories([existingAccessory]);
-                    const accessory = new accessory_1.NeakasaAccessory(this, existingAccessory, device.iotId, device.deviceName);
+                    const accessory = new accessory_1.NeakasaAccessory(this, existingAccessory, device.iotId, device.deviceName, this.config);
                     this.deviceAccessories.set(device.iotId, accessory);
                 }
                 else {
-                    this.log.info('Adding new accessory:', device.deviceName);
-                    const accessory = new this.api.platformAccessory(device.deviceName, uuid);
+                    this.log.info('Adding new accessory:', displayName);
+                    const accessory = new this.api.platformAccessory(displayName, uuid);
                     accessory.context.device = device;
-                    const neakasaAccessory = new accessory_1.NeakasaAccessory(this, accessory, device.iotId, device.deviceName);
+                    const neakasaAccessory = new accessory_1.NeakasaAccessory(this, accessory, device.iotId, device.deviceName, this.config);
                     this.deviceAccessories.set(device.iotId, neakasaAccessory);
                     this.api.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
                     this.accessories.push(accessory);

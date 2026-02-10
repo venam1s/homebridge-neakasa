@@ -5,6 +5,11 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   password: string;
   pollInterval?: number;
   debug?: boolean;
+  deviceName?: string;
+  showStatusSensor?: boolean;
+  showBinStateSensor?: boolean;
+  showWifiSensor?: boolean;
+  showCatSensors?: boolean;
 }
 
 export interface NeakasaDevice {
@@ -104,4 +109,21 @@ export const SandLevel = {
   SUFFICIENT: 2,
   OVERFILLED: 3,
 } as const;
+
+export const BucketStatus: Record<number, string> = {
+  0: 'Idle',
+  1: 'Cleaning',
+  2: 'Leveling',
+  3: 'Flipover',
+  4: 'Cat Present',
+  5: 'Paused',
+  6: 'Panels Missing',
+  7: 'Interrupted',
+};
+
+export const BinState: Record<number, string> = {
+  0: 'Normal',
+  1: 'Full',
+  2: 'Missing',
+};
 

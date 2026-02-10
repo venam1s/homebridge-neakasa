@@ -4,6 +4,11 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
     password: string;
     pollInterval?: number;
     debug?: boolean;
+    deviceName?: string;
+    showStatusSensor?: boolean;
+    showBinStateSensor?: boolean;
+    showWifiSensor?: boolean;
+    showCatSensors?: boolean;
 }
 export interface NeakasaDevice {
     iotId: string;
@@ -90,4 +95,6 @@ export declare const SandLevel: {
     readonly SUFFICIENT: 2;
     readonly OVERFILLED: 3;
 };
+export declare const BucketStatus: Record<number, string>;
+export declare const BinState: Record<number, string>;
 //# sourceMappingURL=types.d.ts.map

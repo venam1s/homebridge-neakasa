@@ -29,10 +29,40 @@
         "minimum": 30,
         "description": "How often to check for updates from the Neakasa cloud"
       },
+      "deviceName": {
+        "title": "Device Name",
+        "type": "string",
+        "default": "Neakasa M1",
+        "description": "Display name for the device in HomeKit"
+      },
       "debug": {
         "title": "Enable Debug Logging",
         "type": "boolean",
         "default": false
+      },
+      "showStatusSensor": {
+        "title": "Show Status Sensor",
+        "type": "boolean",
+        "default": true,
+        "description": "Show a contact sensor indicating the current device status (Idle, Cleaning, etc.)"
+      },
+      "showBinStateSensor": {
+        "title": "Show Bin State Sensor",
+        "type": "boolean",
+        "default": true,
+        "description": "Show a leak sensor indicating waste bin state (Normal, Full, Missing)"
+      },
+      "showWifiSensor": {
+        "title": "Show WiFi Signal Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Show a humidity sensor repurposed to display WiFi signal strength"
+      },
+      "showCatSensors": {
+        "title": "Show Cat Weight Sensors",
+        "type": "boolean",
+        "default": true,
+        "description": "Show per-cat weight sensors (one per registered cat)"
       }
     }
   },
@@ -56,14 +86,28 @@
       "flex-flow": "row wrap",
       "items": [
         {
-          "key": "pollInterval",
+          "key": "deviceName",
           "flex": "1 1 50%"
         },
         {
-          "key": "debug",
+          "key": "pollInterval",
           "flex": "1 1 50%"
         }
       ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Optional Sensors",
+      "expandable": true,
+      "items": [
+        "showStatusSensor",
+        "showBinStateSensor",
+        "showWifiSensor",
+        "showCatSensors"
+      ]
+    },
+    {
+      "key": "debug"
     }
   ]
 }
