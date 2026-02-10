@@ -4,7 +4,11 @@ nodemon.json
 .eslintrc
 .git/
 .gitignore
+.npmignore
 *.log
 *.tgz
 .vscode/
 .idea/
+.DS_Store
+QUICKSTART.md
+CHANGELOG.md
