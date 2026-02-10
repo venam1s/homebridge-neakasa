@@ -1,7 +1,7 @@
 {
   "name": "homebridge-neakasa",
   "displayName": "Neakasa",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Homebridge plugin for Neakasa M1 Cat Litter Box — control and monitor your smart litter box from HomeKit",
   "license": "MIT",
   "author": "smithmarcw",
