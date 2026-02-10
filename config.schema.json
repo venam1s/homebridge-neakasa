@@ -43,55 +43,62 @@
       "showChildLock": {
         "title": "Child Lock Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Prevents the device from being operated manually"
       },
       "showAutoBury": {
         "title": "Auto Bury Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Automatically covers waste after cat use"
       },
       "showAutoLevel": {
         "title": "Auto Level Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Automatically levels the litter after cleaning"
       },
       "showSilentMode": {
         "title": "Silent Mode Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Reduces motor noise during operation"
       },
       "showUnstoppableCycle": {
         "title": "Unstoppable Cycle Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Cleaning cycle won't pause if interrupted"
       },
       "showAutoRecovery": {
         "title": "Auto Recovery Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Automatically resumes after an interruption"
       },
       "showYoungCatMode": {
         "title": "Young Cat Mode Switch",
         "type": "boolean",
-        "default": false
+        "default": false,
+        "description": "Adjusts timing for kittens and young cats"
       },
       "showBinStateSensor": {
         "title": "Bin State Sensor",
         "type": "boolean",
         "default": false,
-        "description": "Leak sensor that alerts when waste bin is full or missing"
+        "description": "Alerts when waste bin is full or missing. Shows as a Leak Sensor in HomeKit."
       },
       "showWifiSensor": {
         "title": "WiFi Signal Sensor",
         "type": "boolean",
         "default": false,
-        "description": "Shows WiFi signal strength as a percentage"
+        "description": "Shows device WiFi signal strength as a percentage. Shows as a Humidity Sensor in HomeKit."
       },
       "showCatSensors": {
         "title": "Cat Weight Sensors",
         "type": "boolean",
         "default": false,
-        "description": "Per-cat weight sensors (one per registered cat)"
+        "description": "Tracks each cat's last recorded weight. Shows as a Humidity Sensor per cat in HomeKit."
       }
     }
   },
