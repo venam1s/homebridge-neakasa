@@ -1,29 +1,47 @@
 # Homebridge Neakasa Plugin
 
 [![npm version](https://badge.fury.io/js/homebridge-neakasa.svg)](https://badge.fury.io/js/homebridge-neakasa)
-[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 
-Homebridge plugin for Neakasa M1 Cat Litter Box. This plugin allows you to monitor and control your Neakasa litter box through Apple HomeKit.
+Homebridge plugin for the **Neakasa M1 Cat Litter Box**. Monitor and control your smart litter box through Apple HomeKit.
 
-This is a TypeScript/Node.js conversion of the [Home Assistant Neakasa Integration](https://github.com/timniklas/hass-neakasa) by [@timniklas](https://github.com/timniklas).
+Ported from the [Home Assistant Neakasa Integration](https://github.com/timniklas/hass-neakasa) by [@timniklas](https://github.com/timniklas).
 
 ## Features
 
-### Sensors
-- **Litter Level** - Shows sand/litter level percentage with low indicator
-- **Bin Full** - Binary sensor indicating when the waste bin is full
+### Core Services (always shown)
 
-### Switches
-- **Auto Clean** - Enable/disable automatic cleaning
-- **Child Lock** - Enable/disable child safety lock
-- **Auto Cover** - Enable/disable automatic litter coverage
-- **Auto Leveling** - Enable/disable automatic sand leveling
-- **Silent Mode** - Enable/disable quiet operation mode
-- **Unstoppable Cycle** - Enable/disable uninterruptible cleaning cycles
+| Service | HomeKit Type | Description |
+|---------|-------------|-------------|
+| **Cat Present** | Occupancy Sensor | Detects when a cat is in the litter box |
+| **Waste Bin Full** | Occupancy Sensor | Alerts when the waste bin needs emptying |
+| **Status** | Contact Sensor | Shows device state (Idle, Cleaning, Cat Present, etc.) |
+| **Litter Level** | Filter Maintenance | Sand level percentage with low-level alert |
+| **Auto Clean** | Switch | Toggle automatic cleaning on/off |
+| **Clean Now** | Switch (button) | Trigger an immediate cleaning cycle |
+| **Level Now** | Switch (button) | Trigger an immediate sand leveling cycle |
 
-### Buttons (Stateless Switches)
-- **Clean Now** - Trigger an immediate cleaning cycle
-- **Level Now** - Trigger an immediate sand leveling cycle
+### Optional Switches (off by default)
+
+| Switch | Description |
+|--------|-------------|
+| **Child Lock** | Prevents manual operation (shows as a Lock in HomeKit) |
+| **Auto Bury** | Automatically covers waste after cat use |
+| **Auto Level** | Automatically levels litter after cleaning |
+| **Silent Mode** | Reduces motor noise during operation |
+| **Unstoppable Cycle** | Cleaning cycle won't pause if interrupted |
+| **Auto Recovery** | Automatically resumes after an interruption |
+| **Young Cat Mode** | Adjusts timing for kittens and young cats |
+
+### Optional Sensors (off by default)
+
+| Sensor | HomeKit Type | Description |
+|--------|-------------|-------------|
+| **Bin State** | Leak Sensor | Detailed bin status (Normal, Full, Missing) |
+| **WiFi Signal** | Humidity Sensor | Device WiFi signal strength as percentage |
+| **Cat Weight** | Humidity Sensor | Per-cat weight tracking (one sensor per cat) |
+| **Sand Level State** | Contact Sensor | Detailed level (Insufficient, Moderate, Sufficient, Overfilled) |
+
+> **Note:** WiFi Signal and Cat Weight sensors appear as Humidity Sensors in HomeKit because HomeKit has no generic number sensor type. This is a common Homebridge workaround.
 
 ## Supported Devices
 
@@ -31,14 +49,14 @@ This is a TypeScript/Node.js conversion of the [Home Assistant Neakasa Integrati
 
 ## Installation
 
-### Option 1: Homebridge UI (Recommended)
+### Homebridge UI (Recommended)
 
-1. Search for "Neakasa" in the Homebridge Config UI X plugin search
+1. Search for **"Neakasa"** in the Homebridge Config UI X plugin search
 2. Click Install
-3. Configure your credentials in the plugin settings
+3. Configure your Neakasa account credentials in the plugin settings
 4. Restart Homebridge
 
-### Option 2: Manual Installation
+### Manual Installation
 
 ```bash
 npm install -g homebridge-neakasa
@@ -46,7 +64,7 @@ npm install -g homebridge-neakasa
 
 ## Configuration
 
-Add the following to your Homebridge `config.json`:
+Add the following to your Homebridge `config.json`, or use the Config UI settings page:
 
 ```json
 {
@@ -69,28 +87,32 @@ Add the following to your Homebridge `config.json`:
 |--------|----------|---------|-------------|
 | `platform` | Yes | `"Neakasa"` | Must be "Neakasa" |
 | `name` | Yes | `"Neakasa"` | Name for the platform |
-| `username` | Yes | - | Your Neakasa account email |
-| `password` | Yes | - | Your Neakasa account password |
-| `pollInterval` | No | `60` | How often to check for updates (in seconds) |
+| `username` | Yes | — | Your Neakasa account email |
+| `password` | Yes | — | Your Neakasa account password |
+| `deviceName` | No | `"Neakasa M1"` | Display name in HomeKit |
+| `pollInterval` | No | `60` | Update interval in seconds (min: 30) |
 | `debug` | No | `false` | Enable debug logging |
+| `showChildLock` | No | `false` | Show Child Lock (Lock) |
+| `showAutoBury` | No | `false` | Show Auto Bury switch |
+| `showAutoLevel` | No | `false` | Show Auto Level switch |
+| `showSilentMode` | No | `false` | Show Silent Mode switch |
+| `showUnstoppableCycle` | No | `false` | Show Unstoppable Cycle switch |
+| `showAutoRecovery` | No | `false` | Show Auto Recovery switch |
+| `showYoungCatMode` | No | `false` | Show Young Cat Mode switch |
+| `showBinStateSensor` | No | `false` | Show Bin State sensor |
+| `showWifiSensor` | No | `false` | Show WiFi Signal sensor |
+| `showCatSensors` | No | `false` | Show per-cat weight sensors |
+| `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
 
-## Usage
+## HomeKit Automation Ideas
 
-Once configured, your Neakasa litter box will appear in the Home app as an accessory with multiple controls:
-
-### Monitoring
-- **Litter Level**: Check the current litter level percentage
-- **Bin Status**: See if the waste bin needs to be emptied
-
-### Controls
-- Turn on/off various automation features through switches
-- Trigger manual cleaning or leveling cycles
-
-### Automation Ideas
-- Get notified when the bin is full
-- Get notified when litter is low
-- Automatically turn on silent mode at night
-- Create scenes that include litter box settings
+| Trigger | Sensor | Use Case |
+|---------|--------|----------|
+| Cat enters the box | Cat Present (Occupancy) | Turn on a light, log activity |
+| Waste bin is full | Waste Bin Full (Occupancy) | Send notification |
+| Litter is low | Litter Level (Filter Maintenance) | Send notification |
+| Cleaning complete | Status returns to Closed (Idle) | Send notification |
+| Nighttime | Schedule | Enable Silent Mode switch |
 
 ## Troubleshooting
 
@@ -99,18 +121,18 @@ Once configured, your Neakasa litter box will appear in the Home app as an acces
 1. Verify your username and password are correct
 2. Make sure you can log into the Neakasa mobile app with the same credentials
 3. Check your internet connection
-4. Enable debug logging to see detailed error messages
+4. If running in Docker, ensure DNS is configured (e.g. `dns: [8.8.8.8, 1.1.1.1]` in docker-compose)
+5. Enable debug logging to see detailed error messages
 
 ### Devices not appearing
 
 1. Make sure your litter box is online in the Neakasa app
 2. Restart Homebridge after adding credentials
 3. Check the Homebridge logs for any errors
-4. Try removing and re-adding the platform configuration
 
 ### State not updating
 
-1. Check the `pollInterval` setting - increase it if you're seeing rate limit errors
+1. Check the `pollInterval` setting — default is 60 seconds
 2. Verify the device is online in the Neakasa mobile app
 3. Restart Homebridge
 
@@ -118,7 +140,7 @@ Once configured, your Neakasa litter box will appear in the Home app as an acces
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/homebridge-neakasa.git
+git clone https://github.com/havuq/homebridge-neakasa.git
 cd homebridge-neakasa
 
 # Install dependencies
@@ -136,12 +158,11 @@ npm run watch
 
 ## Credits
 
-- Original Home Assistant integration by [@timniklas](https://github.com/timniklas) - [hass-neakasa](https://github.com/timniklas/hass-neakasa)
-- Converted to Homebridge plugin by Claude AI
+- Original Home Assistant integration by [@timniklas](https://github.com/timniklas) — [hass-neakasa](https://github.com/timniklas/hass-neakasa)
 
 ## Disclaimer
 
-This plugin is not officially endorsed or supported by Neakasa. Use at your own risk and ensure you comply with all relevant terms of service and privacy policies.
+This plugin is not officially endorsed or supported by Neakasa. Use at your own risk.
 
 ## License
 
@@ -154,4 +175,4 @@ If you find this plugin helpful, please consider:
 - Reporting issues and bugs
 - Contributing improvements
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/YOUR_USERNAME/homebridge-neakasa/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/havuq/homebridge-neakasa/issues) page.
