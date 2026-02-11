@@ -17,6 +17,7 @@
     "type": "github",
     "url": "https://github.com/sponsors/smithmarcw"
   },
+  "icon": "https://raw.githubusercontent.com/havuq/homebridge-neakasa/main/branding/icon.png",
   "engines": {
     "node": ">=18.0.0",
     "homebridge": ">=1.6.0"
