@@ -145,6 +145,13 @@
     },
     {
       "type": "fieldset",
+      "title": "Display Preferences",
+      "items": [
+        "useImperialUnits"
+      ]
+    },
+    {
+      "type": "fieldset",
       "title": "Optional Switches",
       "expandable": true,
       "items": [
@@ -165,8 +172,7 @@
         "showBinStateSensor",
         "showWifiSensor",
         "showCatSensors",
-        "showSandLevelSensor",
-        "useImperialUnits"
+        "showSandLevelSensor"
       ]
     },
     {
