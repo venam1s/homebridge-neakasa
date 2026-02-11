@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { NeakasaPlatform } from './platform';
-import { DeviceData, SandLevel, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
+import { DeviceData, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
 
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();
@@ -66,6 +66,12 @@ export class NeakasaAccessory {
     this.setServiceName(statusSensor, 'Status');
     this.services.set('status', statusSensor);
 
+    // Cat Present (OccupancySensor)
+    const catPresentSensor = this.accessory.getService('cat-present') ||
+      this.accessory.addService(this.platform.Service.OccupancySensor, 'Cat Present', 'cat-present');
+    this.setServiceName(catPresentSensor, 'Cat Present');
+    this.services.set('catPresent', catPresentSensor);
+
     // Litter Level (FilterMaintenance)
     const filterService = this.accessory.getService(this.platform.Service.FilterMaintenance) ||
       this.accessory.addService(this.platform.Service.FilterMaintenance, 'Litter Level', 'sand-level');
@@ -74,8 +80,19 @@ export class NeakasaAccessory {
 
     // === OPTIONAL SWITCHES (off by default) ===
 
-    this.addOptionalSwitch('childLock', 'Child Lock', 'child-lock',
-      this.config.showChildLock, this.setChildLock, this.getChildLock);
+    if (this.config.showChildLock === true) {
+      const lockService = this.accessory.getService('child-lock') ||
+        this.accessory.addService(this.platform.Service.LockMechanism, 'Child Lock', 'child-lock');
+      this.setServiceName(lockService, 'Child Lock');
+      lockService.getCharacteristic(this.platform.Characteristic.LockCurrentState)
+        .onGet(this.getChildLockState.bind(this));
+      lockService.getCharacteristic(this.platform.Characteristic.LockTargetState)
+        .onSet(this.setChildLock.bind(this))
+        .onGet(this.getChildLockState.bind(this));
+      this.services.set('childLock', lockService);
+    } else {
+      this.removeServiceIfExists('child-lock');
+    }
 
     this.addOptionalSwitch('autoBury', 'Auto Bury', 'auto-bury',
       this.config.showAutoBury, this.setAutoBury, this.getAutoBury);
@@ -113,6 +130,15 @@ export class NeakasaAccessory {
       this.services.set('wifi', wifiSensor);
     } else {
       this.removeServiceIfExists('wifi-signal');
+    }
+
+    if (this.config.showSandLevelSensor === true) {
+      const sandSensor = this.accessory.getService('sand-level-state') ||
+        this.accessory.addService(this.platform.Service.ContactSensor, 'Sand Level State', 'sand-level-state');
+      this.setServiceName(sandSensor, 'Sand Level State');
+      this.services.set('sandLevelState', sandSensor);
+    } else {
+      this.removeServiceIfExists('sand-level-state');
     }
   }
 
@@ -199,8 +225,24 @@ export class NeakasaAccessory {
     const statusName = BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
     statusSensor.updateCharacteristic(this.platform.Characteristic.Name, statusName);
 
+    // Core: Cat Present
+    const catPresentSensor = this.services.get('catPresent')!;
+    catPresentSensor.updateCharacteristic(
+      this.platform.Characteristic.OccupancyDetected,
+      data.bucketStatus === 4 ?
+        this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
+        this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
+    );
+
     // Optional switches (only update if service exists)
-    this.services.get('childLock')?.updateCharacteristic(this.platform.Characteristic.On, data.childLockOnOff);
+    const childLockService = this.services.get('childLock');
+    if (childLockService) {
+      const lockState = data.childLockOnOff ?
+        this.platform.Characteristic.LockCurrentState.SECURED :
+        this.platform.Characteristic.LockCurrentState.UNSECURED;
+      childLockService.updateCharacteristic(this.platform.Characteristic.LockCurrentState, lockState);
+      childLockService.updateCharacteristic(this.platform.Characteristic.LockTargetState, lockState);
+    }
     this.services.get('autoBury')?.updateCharacteristic(this.platform.Characteristic.On, data.autoBury);
     this.services.get('autoLevel')?.updateCharacteristic(this.platform.Characteristic.On, data.autoLevel);
     this.services.get('silentMode')?.updateCharacteristic(this.platform.Characteristic.On, data.silentMode);
@@ -227,6 +269,20 @@ export class NeakasaAccessory {
     if (wifiSensor) {
       const signalPercent = this.rssiToPercent(data.wifiRssi);
       wifiSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, signalPercent);
+    }
+
+    // Optional: Sand Level State sensor
+    const sandSensor = this.services.get('sandLevelState');
+    if (sandSensor) {
+      const isInsufficient = data.sandLevelState === SandLevel.INSUFFICIENT;
+      sandSensor.updateCharacteristic(
+        this.platform.Characteristic.ContactSensorState,
+        isInsufficient ?
+          this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+          this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
+      );
+      const sandStateName = SandLevelName[data.sandLevelState] || `Unknown (${data.sandLevelState})`;
+      sandSensor.updateCharacteristic(this.platform.Characteristic.Name, sandStateName);
     }
 
     // Optional: Cat Weight sensors
@@ -291,18 +347,27 @@ export class NeakasaAccessory {
   }
 
   async setChildLock(value: CharacteristicValue): Promise<void> {
-    const newValue = value as boolean;
+    const locked = value === this.platform.Characteristic.LockTargetState.SECURED;
     try {
-      await this.platform.neakasaApi.setDeviceProperties(this.iotId, { childLockOnOff: newValue ? 1 : 0 });
-      this.platform.log.info(`Set Child Lock to ${newValue}`);
+      await this.platform.neakasaApi.setDeviceProperties(this.iotId, { childLockOnOff: locked ? 1 : 0 });
+      this.platform.log.info(`Set Child Lock to ${locked ? 'Locked' : 'Unlocked'}`);
+      // Update current state to match target
+      this.services.get('childLock')?.updateCharacteristic(
+        this.platform.Characteristic.LockCurrentState,
+        locked ?
+          this.platform.Characteristic.LockCurrentState.SECURED :
+          this.platform.Characteristic.LockCurrentState.UNSECURED,
+      );
     } catch (error) {
       this.platform.log.error(`Failed to set Child Lock: ${error}`);
       throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
 
-  async getChildLock(): Promise<CharacteristicValue> {
-    return this.deviceData?.childLockOnOff || false;
+  async getChildLockState(): Promise<CharacteristicValue> {
+    return this.deviceData?.childLockOnOff ?
+      this.platform.Characteristic.LockCurrentState.SECURED :
+      this.platform.Characteristic.LockCurrentState.UNSECURED;
   }
 
   async setAutoBury(value: CharacteristicValue): Promise<void> {

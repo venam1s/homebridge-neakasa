@@ -18,6 +18,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   showBinStateSensor?: boolean;
   showWifiSensor?: boolean;
   showCatSensors?: boolean;
+  showSandLevelSensor?: boolean;
 }
 
 export interface NeakasaDevice {
@@ -117,6 +118,13 @@ export const SandLevel = {
   SUFFICIENT: 2,
   OVERFILLED: 3,
 } as const;
+
+export const SandLevelName: Record<number, string> = {
+  0: 'Insufficient',
+  1: 'Moderate',
+  2: 'Sufficient',
+  3: 'Overfilled',
+};
 
 export const BucketStatus: Record<number, string> = {
   0: 'Idle',

@@ -41,10 +41,10 @@
         "default": false
       },
       "showChildLock": {
-        "title": "Child Lock Switch",
+        "title": "Child Lock",
         "type": "boolean",
         "default": false,
-        "description": "Prevents the device from being operated manually"
+        "description": "Prevents the device from being operated manually. Shows as a Lock in HomeKit."
       },
       "showAutoBury": {
         "title": "Auto Bury Switch",
@@ -99,6 +99,12 @@
         "type": "boolean",
         "default": false,
         "description": "Tracks each cat's last recorded weight. Shows as a Humidity Sensor per cat in HomeKit."
+      },
+      "showSandLevelSensor": {
+        "title": "Sand Level State Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Shows detailed sand level (Insufficient, Moderate, Sufficient, Overfilled). Shows as a Contact Sensor in HomeKit."
       }
     }
   },
@@ -152,7 +158,8 @@
       "items": [
         "showBinStateSensor",
         "showWifiSensor",
-        "showCatSensors"
+        "showCatSensors",
+        "showSandLevelSensor"
       ]
     },
     {
