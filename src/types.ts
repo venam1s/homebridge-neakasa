@@ -19,6 +19,8 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   showWifiSensor?: boolean;
   showCatSensors?: boolean;
   showSandLevelSensor?: boolean;
+  // Unit preference
+  useImperialUnits?: boolean;
 }
 
 export interface NeakasaDevice {

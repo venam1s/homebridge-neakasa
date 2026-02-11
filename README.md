@@ -43,6 +43,19 @@ Ported from the [Home Assistant Neakasa Integration](https://github.com/timnikla
 
 > **Note:** WiFi Signal and Cat Weight sensors appear as Humidity Sensors in HomeKit because HomeKit has no generic number sensor type. This is a common Homebridge workaround.
 
+#### Cat Weight Sensors
+
+Cat weight is displayed as a percentage (%) value in HomeKit due to the humidity sensor workaround. By default, weights are shown in **kilograms** (e.g., 5% = 5 kg ≈ 11 lbs).
+
+You can enable **Imperial Units** to display weights in **pounds** instead (e.g., 11% = 11 lbs ≈ 5 kg):
+
+```json
+{
+  "showCatSensors": true,
+  "useImperialUnits": true
+}
+```
+
 ## Supported Devices
 
 - Neakasa M1 Cat Litter Box
@@ -103,6 +116,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showWifiSensor` | No | `false` | Show WiFi Signal sensor |
 | `showCatSensors` | No | `false` | Show per-cat weight sensors |
 | `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
+| `useImperialUnits` | No | `false` | Display cat weight in lbs instead of kg |
 
 ## HomeKit Automation Ideas
 

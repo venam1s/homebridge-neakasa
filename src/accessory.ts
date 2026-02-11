@@ -322,8 +322,16 @@ export class NeakasaAccessory {
 
       if (catRecords.length > 0) {
         const latestRecord = catRecords[0];
-        const weight = Math.min(100, Math.max(0, latestRecord.weight));
-        catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, weight);
+        let weight = latestRecord.weight; // weight in kg from API
+
+        // Convert to lbs if imperial units are enabled
+        if (this.config.useImperialUnits === true) {
+          weight = weight * 2.20462; // Convert kg to lbs
+        }
+
+        // Cap at 0-100 for HomeKit humidity sensor display
+        const displayWeight = Math.min(100, Math.max(0, Math.round(weight)));
+        catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, displayWeight);
       }
     }
   }

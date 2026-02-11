@@ -105,6 +105,12 @@
         "type": "boolean",
         "default": false,
         "description": "Shows detailed sand level (Insufficient, Moderate, Sufficient, Overfilled). Shows as a Contact Sensor in HomeKit."
+      },
+      "useImperialUnits": {
+        "title": "Use Imperial Units (lbs)",
+        "type": "boolean",
+        "default": false,
+        "description": "Display cat weight in pounds instead of kilograms. Note: Weight is shown as a percentage (%) in HomeKit due to sensor limitations."
       }
     }
   },
@@ -159,7 +165,8 @@
         "showBinStateSensor",
         "showWifiSensor",
         "showCatSensors",
-        "showSandLevelSensor"
+        "showSandLevelSensor",
+        "useImperialUnits"
       ]
     },
     {
