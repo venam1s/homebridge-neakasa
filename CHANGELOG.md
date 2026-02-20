@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1] - 2026-02-20
+
+### Fixed
+- Config schema: moved `required` from individual field properties to an array at the object level, per JSON Schema spec.
+
+## [1.5.0] - 2026-02-20
+
+### Added
+- **Fault Alert sensor** — optional Motion Sensor that triggers when the device reports a fault (`bucketStatus` 6 = Panels Missing, 7 = Interrupted). Enable via Optional Sensors in the config UI.
+- Logs a warning to the Homebridge log when a fault is detected.
+
+### Changed
+- Characteristics now only update in HomeKit when the value actually changes (debounce), preventing spurious notifications on every poll cycle.
+
+### Fixed
+- Plugin icon replaced with proper 512×512px version for correct display in Homebridge UI.
+
+## [1.4.0] - 2026-02-11
+
+### Added
+- **Imperial/Metric unit preference** — new `useImperialUnits` config option displays cat weight in pounds instead of kilograms (e.g., 11% = 11 lbs vs. 5% = 5 kg).
+
+## [1.3.0] - 2026-02-11
+
+### Added
+- **Cat Present sensor** — core OccupancySensor that detects when a cat is in the litter box (`bucketStatus === 4`).
+- **Child Lock as Lock** — converted from a Switch to a proper LockMechanism; displays as a lock icon in the Home app.
+- **Sand Level State sensor** — optional ContactSensor showing detailed litter level (Insufficient, Moderate, Sufficient, Overfilled).
+- Custom plugin icon displayed in Homebridge Config UI X.
+- GitHub Actions workflow for automated npm publishing on release.
+- `package-lock.json` for reliable CI builds.
+
+### Changed
+- Overhauled README with full feature tables, all config options, and automation ideas.
+
+## [1.2.1] - 2026-02-10
+
+### Added
+- Descriptions added to all config options in Homebridge UI.
+- HomeKit type disclaimers for sensors that appear as non-obvious types (Humidity Sensor, Leak Sensor).
+
 ## [1.2.0] - 2026-02-09
 
 ### Fixed
