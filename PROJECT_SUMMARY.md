@@ -4,7 +4,7 @@
 
 **homebridge-neakasa** is a Homebridge plugin that brings the Neakasa M1 Cat Litter Box into Apple HomeKit. It was built as a TypeScript/Node.js port of the [Home Assistant Neakasa Integration](https://github.com/timniklas/hass-neakasa) by [@timniklas](https://github.com/timniklas).
 
-- **Repository**: [github.com/smithmarcw/homebridge-neakasa](https://github.com/smithmarcw/homebridge-neakasa)
+- **Repository**: [github.com/havuq/homebridge-neakasa](https://github.com/havuq/homebridge-neakasa)
 - **npm package**: `homebridge-neakasa`
 - **Current version**: v1.2.0
 - **License**: MIT
