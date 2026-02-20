@@ -6,7 +6,7 @@
 
 - **Repository**: [github.com/havuq/homebridge-neakasa](https://github.com/havuq/homebridge-neakasa)
 - **npm package**: `homebridge-neakasa`
-- **Current version**: v1.2.0
+- **Current version**: v1.5.0
 - **License**: MIT
 
 ---
@@ -57,10 +57,11 @@ All requests to the Alibaba Cloud API Gateway are HMAC-SHA256 signed with proper
 **7 Optional Switches (off by default, enabled in config):**
 - Child Lock, Auto Bury, Auto Level, Silent Mode, Unstoppable Cycle, Auto Recovery, Young Cat Mode
 
-**3 Optional Sensors (off by default):**
+**4 Optional Sensors (off by default):**
 - Bin State (LeakSensor — Normal/Full/Missing)
 - WiFi Signal (HumiditySensor — RSSI converted to percentage)
 - Cat Weight (HumiditySensor per registered cat — one sensor per cat)
+- Fault Alert (MotionSensor — motion detected = device faulted, bucketStatus 6 or 7)
 
 ---
 
@@ -97,6 +98,14 @@ All requests to the Alibaba Cloud API Gateway are HMAC-SHA256 signed with proper
 ---
 
 ## Release History
+
+### v1.5.0 — Fault Alert, Debounce & Icon Fix
+- Added optional Fault Alert sensor (MotionSensor) for bucketStatus 6 (Panels Missing) and 7 (Interrupted)
+- Added `updateIfChanged` debounce — HomeKit characteristics only update when values actually change, preventing spurious notifications on every poll cycle
+- Fixed plugin icon (replaced 100×100px with 512×512px) so it displays correctly in Homebridge UI
+
+### v1.4.0 — Display Preferences
+- Moved imperial units to a prominent Display Preferences section in config UI
 
 ### v1.2.0 — Simplified Accessories & Fixed Naming
 - Reduced default tiles from 15 to 6 core services
@@ -148,9 +157,9 @@ All requests to the Alibaba Cloud API Gateway are HMAC-SHA256 signed with proper
 
 ## Pending / Future Work
 
-- **npm publish**: v1.2.0 is built and ready, needs OTP from authenticator to complete `npm publish --access public`
-- **Cat Present sensor**: A dedicated OccupancySensor that triggers only on `bucketStatus === 4` (Cat Present) would give cleaner automation triggers than the general Status ContactSensor
-- **README update**: Current README is out of date — doesn't reflect v1.2.0 features, optional config, or correct GitHub URLs
+- **Last cleaned timestamp**: Expose as a characteristic or log entry for tracking maintenance schedules
+- **Faster polling after cat visit**: Poll more frequently for 30s after bucketStatus transitions from Cat Present back to Idle
+- **Days since litter change**: Simple counter reset via a switch, exposed as a sensor
 
 ---
 

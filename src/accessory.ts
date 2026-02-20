@@ -2,9 +2,12 @@ import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { NeakasaPlatform } from './platform';
 import { DeviceData, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
 
+const FAULT_STATUSES = new Set([6, 7]); // Panels Missing, Interrupted
+
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();
   private deviceData?: DeviceData;
+  private previousData?: DeviceData;
   private readonly config: NeakasaPlatformConfig;
 
   constructor(
@@ -28,6 +31,13 @@ export class NeakasaAccessory {
   private setServiceName(service: Service, name: string): void {
     service.setCharacteristic(this.platform.Characteristic.Name, name);
     service.setCharacteristic(this.platform.Characteristic.ConfiguredName, name);
+  }
+
+  private updateIfChanged(service: Service, characteristic: any, newValue: CharacteristicValue): void {
+    const current = service.getCharacteristic(characteristic).value;
+    if (current !== newValue) {
+      service.updateCharacteristic(characteristic, newValue);
+    }
   }
 
   private setupServices(): void {
@@ -140,6 +150,15 @@ export class NeakasaAccessory {
     } else {
       this.removeServiceIfExists('sand-level-state');
     }
+
+    if (this.config.showFaultSensor === true) {
+      const faultSensor = this.accessory.getService('fault-alert') ||
+        this.accessory.addService(this.platform.Service.MotionSensor, 'Fault Alert', 'fault-alert');
+      this.setServiceName(faultSensor, 'Fault Alert');
+      this.services.set('faultAlert', faultSensor);
+    } else {
+      this.removeServiceIfExists('fault-alert');
+    }
   }
 
   private addSwitch(
@@ -198,12 +217,13 @@ export class NeakasaAccessory {
     const changeIndication = data.sandLevelState === SandLevel.INSUFFICIENT ?
       this.platform.Characteristic.FilterChangeIndication.CHANGE_FILTER :
       this.platform.Characteristic.FilterChangeIndication.FILTER_OK;
-    filterService.updateCharacteristic(this.platform.Characteristic.FilterChangeIndication, changeIndication);
-    filterService.updateCharacteristic(this.platform.Characteristic.FilterLifeLevel, data.sandLevelPercent);
+    this.updateIfChanged(filterService, this.platform.Characteristic.FilterChangeIndication, changeIndication);
+    this.updateIfChanged(filterService, this.platform.Characteristic.FilterLifeLevel, data.sandLevelPercent);
 
     // Core: Waste Bin Full
     const binSensor = this.services.get('binFull')!;
-    binSensor.updateCharacteristic(
+    this.updateIfChanged(
+      binSensor,
       this.platform.Characteristic.OccupancyDetected,
       data.binFullWaitReset ?
         this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
@@ -211,23 +231,25 @@ export class NeakasaAccessory {
     );
 
     // Core: Auto Clean
-    this.services.get('autoClean')!.updateCharacteristic(this.platform.Characteristic.On, data.cleanCfg?.active === 1);
+    this.updateIfChanged(this.services.get('autoClean')!, this.platform.Characteristic.On, data.cleanCfg?.active === 1);
 
     // Core: Status sensor
     const statusSensor = this.services.get('status')!;
     const isActive = data.bucketStatus !== 0;
-    statusSensor.updateCharacteristic(
+    this.updateIfChanged(
+      statusSensor,
       this.platform.Characteristic.ContactSensorState,
       isActive ?
         this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
         this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
     );
     const statusName = BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
-    statusSensor.updateCharacteristic(this.platform.Characteristic.Name, statusName);
+    this.updateIfChanged(statusSensor, this.platform.Characteristic.Name, statusName);
 
     // Core: Cat Present
     const catPresentSensor = this.services.get('catPresent')!;
-    catPresentSensor.updateCharacteristic(
+    this.updateIfChanged(
+      catPresentSensor,
       this.platform.Characteristic.OccupancyDetected,
       data.bucketStatus === 4 ?
         this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
@@ -240,55 +262,74 @@ export class NeakasaAccessory {
       const lockState = data.childLockOnOff ?
         this.platform.Characteristic.LockCurrentState.SECURED :
         this.platform.Characteristic.LockCurrentState.UNSECURED;
-      childLockService.updateCharacteristic(this.platform.Characteristic.LockCurrentState, lockState);
-      childLockService.updateCharacteristic(this.platform.Characteristic.LockTargetState, lockState);
+      this.updateIfChanged(childLockService, this.platform.Characteristic.LockCurrentState, lockState);
+      this.updateIfChanged(childLockService, this.platform.Characteristic.LockTargetState, lockState);
     }
-    this.services.get('autoBury')?.updateCharacteristic(this.platform.Characteristic.On, data.autoBury);
-    this.services.get('autoLevel')?.updateCharacteristic(this.platform.Characteristic.On, data.autoLevel);
-    this.services.get('silentMode')?.updateCharacteristic(this.platform.Characteristic.On, data.silentMode);
-    this.services.get('unstoppable')?.updateCharacteristic(this.platform.Characteristic.On, data.bIntrptRangeDet);
-    this.services.get('autoRecovery')?.updateCharacteristic(this.platform.Characteristic.On, data.autoForceInit);
-    this.services.get('youngCatMode')?.updateCharacteristic(this.platform.Characteristic.On, data.youngCatMode);
+    const autoBury = this.services.get('autoBury');
+    if (autoBury) { this.updateIfChanged(autoBury, this.platform.Characteristic.On, data.autoBury); }
+    const autoLevel = this.services.get('autoLevel');
+    if (autoLevel) { this.updateIfChanged(autoLevel, this.platform.Characteristic.On, data.autoLevel); }
+    const silentMode = this.services.get('silentMode');
+    if (silentMode) { this.updateIfChanged(silentMode, this.platform.Characteristic.On, data.silentMode); }
+    const unstoppable = this.services.get('unstoppable');
+    if (unstoppable) { this.updateIfChanged(unstoppable, this.platform.Characteristic.On, data.bIntrptRangeDet); }
+    const autoRecovery = this.services.get('autoRecovery');
+    if (autoRecovery) { this.updateIfChanged(autoRecovery, this.platform.Characteristic.On, data.autoForceInit); }
+    const youngCatMode = this.services.get('youngCatMode');
+    if (youngCatMode) { this.updateIfChanged(youngCatMode, this.platform.Characteristic.On, data.youngCatMode); }
 
     // Optional: Bin State sensor
     const binStateSensor = this.services.get('binState');
     if (binStateSensor) {
       const leakDetected = data.room_of_bin !== 0;
-      binStateSensor.updateCharacteristic(
+      this.updateIfChanged(
+        binStateSensor,
         this.platform.Characteristic.LeakDetected,
         leakDetected ?
           this.platform.Characteristic.LeakDetected.LEAK_DETECTED :
           this.platform.Characteristic.LeakDetected.LEAK_NOT_DETECTED,
       );
       const binStateName = BinState[data.room_of_bin] || `Unknown (${data.room_of_bin})`;
-      binStateSensor.updateCharacteristic(this.platform.Characteristic.Name, binStateName);
+      this.updateIfChanged(binStateSensor, this.platform.Characteristic.Name, binStateName);
     }
 
     // Optional: WiFi Signal sensor
     const wifiSensor = this.services.get('wifi');
     if (wifiSensor) {
-      const signalPercent = this.rssiToPercent(data.wifiRssi);
-      wifiSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, signalPercent);
+      this.updateIfChanged(wifiSensor, this.platform.Characteristic.CurrentRelativeHumidity, this.rssiToPercent(data.wifiRssi));
     }
 
     // Optional: Sand Level State sensor
     const sandSensor = this.services.get('sandLevelState');
     if (sandSensor) {
       const isInsufficient = data.sandLevelState === SandLevel.INSUFFICIENT;
-      sandSensor.updateCharacteristic(
+      this.updateIfChanged(
+        sandSensor,
         this.platform.Characteristic.ContactSensorState,
         isInsufficient ?
           this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
           this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
       );
       const sandStateName = SandLevelName[data.sandLevelState] || `Unknown (${data.sandLevelState})`;
-      sandSensor.updateCharacteristic(this.platform.Characteristic.Name, sandStateName);
+      this.updateIfChanged(sandSensor, this.platform.Characteristic.Name, sandStateName);
+    }
+
+    // Optional: Fault Alert sensor
+    const faultSensor = this.services.get('faultAlert');
+    if (faultSensor) {
+      const isFaulted = FAULT_STATUSES.has(data.bucketStatus);
+      this.updateIfChanged(faultSensor, this.platform.Characteristic.MotionDetected, isFaulted);
+      if (isFaulted) {
+        this.platform.log.warn(`${this.deviceName} fault: ${BucketStatus[data.bucketStatus]}`);
+      }
     }
 
     // Optional: Cat Weight sensors
     if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
       this.updateCatSensors(data);
     }
+
+    this.previousData = data;
 
     this.platform.log.debug(
       `Updated ${this.deviceName}: Status=${BucketStatus[data.bucketStatus] || data.bucketStatus}, ` +

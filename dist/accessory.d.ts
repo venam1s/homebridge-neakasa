@@ -8,9 +8,11 @@ export declare class NeakasaAccessory {
     private readonly deviceName;
     private services;
     private deviceData?;
+    private previousData?;
     private readonly config;
     constructor(platform: NeakasaPlatform, accessory: PlatformAccessory, iotId: string, deviceName: string, config: NeakasaPlatformConfig);
     private setServiceName;
+    private updateIfChanged;
     private setupServices;
     private addSwitch;
     private addOptionalSwitch;
@@ -21,7 +23,7 @@ export declare class NeakasaAccessory {
     setAutoClean(value: CharacteristicValue): Promise<void>;
     getAutoClean(): Promise<CharacteristicValue>;
     setChildLock(value: CharacteristicValue): Promise<void>;
-    getChildLock(): Promise<CharacteristicValue>;
+    getChildLockState(): Promise<CharacteristicValue>;
     setAutoBury(value: CharacteristicValue): Promise<void>;
     getAutoBury(): Promise<CharacteristicValue>;
     setAutoLevel(value: CharacteristicValue): Promise<void>;

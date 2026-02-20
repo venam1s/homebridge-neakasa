@@ -21,6 +21,8 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   showSandLevelSensor?: boolean;
   // Unit preference
   useImperialUnits?: boolean;
+  // Fault sensor
+  showFaultSensor?: boolean;
 }
 
 export interface NeakasaDevice {

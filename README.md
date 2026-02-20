@@ -40,8 +40,11 @@ Ported from the [Home Assistant Neakasa Integration](https://github.com/timnikla
 | **WiFi Signal** | Humidity Sensor | Device WiFi signal strength as percentage |
 | **Cat Weight** | Humidity Sensor | Per-cat weight tracking (one sensor per cat) |
 | **Sand Level State** | Contact Sensor | Detailed level (Insufficient, Moderate, Sufficient, Overfilled) |
+| **Fault Alert** | Motion Sensor | Alerts when the device is stuck or faulted (Panels Missing, Interrupted) |
 
 > **Note:** WiFi Signal and Cat Weight sensors appear as Humidity Sensors in HomeKit because HomeKit has no generic number sensor type. This is a common Homebridge workaround.
+
+> **Note:** The Fault Alert sensor uses Motion Sensor — "motion detected" means a fault is active. Use it to trigger HomeKit notifications or automations when the device jams or loses its panels.
 
 #### Cat Weight Sensors
 
@@ -116,6 +119,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showWifiSensor` | No | `false` | Show WiFi Signal sensor |
 | `showCatSensors` | No | `false` | Show per-cat weight sensors |
 | `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
+| `showFaultSensor` | No | `false` | Show Fault Alert sensor (Motion Sensor) |
 | `useImperialUnits` | No | `false` | Display cat weight in lbs instead of kg |
 
 ## HomeKit Automation Ideas
@@ -127,6 +131,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | Litter is low | Litter Level (Filter Maintenance) | Send notification |
 | Cleaning complete | Status returns to Closed (Idle) | Send notification |
 | Nighttime | Schedule | Enable Silent Mode switch |
+| Device is stuck/jammed | Fault Alert (Motion) | Send notification |
 
 ## Troubleshooting
 

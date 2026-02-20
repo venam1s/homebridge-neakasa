@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NeakasaAccessory = void 0;
 const types_1 = require("./types");
+const FAULT_STATUSES = new Set([6, 7]);
 class NeakasaAccessory {
     constructor(platform, accessory, iotId, deviceName, config) {
         this.platform = platform;
@@ -19,6 +20,12 @@ class NeakasaAccessory {
     setServiceName(service, name) {
         service.setCharacteristic(this.platform.Characteristic.Name, name);
         service.setCharacteristic(this.platform.Characteristic.ConfiguredName, name);
+    }
+    updateIfChanged(service, characteristic, newValue) {
+        const current = service.getCharacteristic(characteristic).value;
+        if (current !== newValue) {
+            service.updateCharacteristic(characteristic, newValue);
+        }
     }
     setupServices() {
         const binSensor = this.accessory.getService('bin-full') ||
@@ -44,11 +51,28 @@ class NeakasaAccessory {
             this.accessory.addService(this.platform.Service.ContactSensor, 'Status', 'device-status');
         this.setServiceName(statusSensor, 'Status');
         this.services.set('status', statusSensor);
+        const catPresentSensor = this.accessory.getService('cat-present') ||
+            this.accessory.addService(this.platform.Service.OccupancySensor, 'Cat Present', 'cat-present');
+        this.setServiceName(catPresentSensor, 'Cat Present');
+        this.services.set('catPresent', catPresentSensor);
         const filterService = this.accessory.getService(this.platform.Service.FilterMaintenance) ||
             this.accessory.addService(this.platform.Service.FilterMaintenance, 'Litter Level', 'sand-level');
         this.setServiceName(filterService, 'Litter Level');
         this.services.set('filter', filterService);
-        this.addOptionalSwitch('childLock', 'Child Lock', 'child-lock', this.config.showChildLock, this.setChildLock, this.getChildLock);
+        if (this.config.showChildLock === true) {
+            const lockService = this.accessory.getService('child-lock') ||
+                this.accessory.addService(this.platform.Service.LockMechanism, 'Child Lock', 'child-lock');
+            this.setServiceName(lockService, 'Child Lock');
+            lockService.getCharacteristic(this.platform.Characteristic.LockCurrentState)
+                .onGet(this.getChildLockState.bind(this));
+            lockService.getCharacteristic(this.platform.Characteristic.LockTargetState)
+                .onSet(this.setChildLock.bind(this))
+                .onGet(this.getChildLockState.bind(this));
+            this.services.set('childLock', lockService);
+        }
+        else {
+            this.removeServiceIfExists('child-lock');
+        }
         this.addOptionalSwitch('autoBury', 'Auto Bury', 'auto-bury', this.config.showAutoBury, this.setAutoBury, this.getAutoBury);
         this.addOptionalSwitch('autoLevel', 'Auto Level', 'auto-level', this.config.showAutoLevel, this.setAutoLevel, this.getAutoLevel);
         this.addOptionalSwitch('silentMode', 'Silent Mode', 'silent-mode', this.config.showSilentMode, this.setSilentMode, this.getSilentMode);
@@ -72,6 +96,24 @@ class NeakasaAccessory {
         }
         else {
             this.removeServiceIfExists('wifi-signal');
+        }
+        if (this.config.showSandLevelSensor === true) {
+            const sandSensor = this.accessory.getService('sand-level-state') ||
+                this.accessory.addService(this.platform.Service.ContactSensor, 'Sand Level State', 'sand-level-state');
+            this.setServiceName(sandSensor, 'Sand Level State');
+            this.services.set('sandLevelState', sandSensor);
+        }
+        else {
+            this.removeServiceIfExists('sand-level-state');
+        }
+        if (this.config.showFaultSensor === true) {
+            const faultSensor = this.accessory.getService('fault-alert') ||
+                this.accessory.addService(this.platform.Service.MotionSensor, 'Fault Alert', 'fault-alert');
+            this.setServiceName(faultSensor, 'Fault Alert');
+            this.services.set('faultAlert', faultSensor);
+        }
+        else {
+            this.removeServiceIfExists('fault-alert');
         }
     }
     addSwitch(key, name, subType, setter, getter) {
@@ -112,44 +154,90 @@ class NeakasaAccessory {
         const changeIndication = data.sandLevelState === types_1.SandLevel.INSUFFICIENT ?
             this.platform.Characteristic.FilterChangeIndication.CHANGE_FILTER :
             this.platform.Characteristic.FilterChangeIndication.FILTER_OK;
-        filterService.updateCharacteristic(this.platform.Characteristic.FilterChangeIndication, changeIndication);
-        filterService.updateCharacteristic(this.platform.Characteristic.FilterLifeLevel, data.sandLevelPercent);
+        this.updateIfChanged(filterService, this.platform.Characteristic.FilterChangeIndication, changeIndication);
+        this.updateIfChanged(filterService, this.platform.Characteristic.FilterLifeLevel, data.sandLevelPercent);
         const binSensor = this.services.get('binFull');
-        binSensor.updateCharacteristic(this.platform.Characteristic.OccupancyDetected, data.binFullWaitReset ?
+        this.updateIfChanged(binSensor, this.platform.Characteristic.OccupancyDetected, data.binFullWaitReset ?
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
-        this.services.get('autoClean').updateCharacteristic(this.platform.Characteristic.On, data.cleanCfg?.active === 1);
+        this.updateIfChanged(this.services.get('autoClean'), this.platform.Characteristic.On, data.cleanCfg?.active === 1);
         const statusSensor = this.services.get('status');
         const isActive = data.bucketStatus !== 0;
-        statusSensor.updateCharacteristic(this.platform.Characteristic.ContactSensorState, isActive ?
+        this.updateIfChanged(statusSensor, this.platform.Characteristic.ContactSensorState, isActive ?
             this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
             this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED);
         const statusName = types_1.BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
-        statusSensor.updateCharacteristic(this.platform.Characteristic.Name, statusName);
-        this.services.get('childLock')?.updateCharacteristic(this.platform.Characteristic.On, data.childLockOnOff);
-        this.services.get('autoBury')?.updateCharacteristic(this.platform.Characteristic.On, data.autoBury);
-        this.services.get('autoLevel')?.updateCharacteristic(this.platform.Characteristic.On, data.autoLevel);
-        this.services.get('silentMode')?.updateCharacteristic(this.platform.Characteristic.On, data.silentMode);
-        this.services.get('unstoppable')?.updateCharacteristic(this.platform.Characteristic.On, data.bIntrptRangeDet);
-        this.services.get('autoRecovery')?.updateCharacteristic(this.platform.Characteristic.On, data.autoForceInit);
-        this.services.get('youngCatMode')?.updateCharacteristic(this.platform.Characteristic.On, data.youngCatMode);
+        this.updateIfChanged(statusSensor, this.platform.Characteristic.Name, statusName);
+        const catPresentSensor = this.services.get('catPresent');
+        this.updateIfChanged(catPresentSensor, this.platform.Characteristic.OccupancyDetected, data.bucketStatus === 4 ?
+            this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
+            this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
+        const childLockService = this.services.get('childLock');
+        if (childLockService) {
+            const lockState = data.childLockOnOff ?
+                this.platform.Characteristic.LockCurrentState.SECURED :
+                this.platform.Characteristic.LockCurrentState.UNSECURED;
+            this.updateIfChanged(childLockService, this.platform.Characteristic.LockCurrentState, lockState);
+            this.updateIfChanged(childLockService, this.platform.Characteristic.LockTargetState, lockState);
+        }
+        const autoBury = this.services.get('autoBury');
+        if (autoBury) {
+            this.updateIfChanged(autoBury, this.platform.Characteristic.On, data.autoBury);
+        }
+        const autoLevel = this.services.get('autoLevel');
+        if (autoLevel) {
+            this.updateIfChanged(autoLevel, this.platform.Characteristic.On, data.autoLevel);
+        }
+        const silentMode = this.services.get('silentMode');
+        if (silentMode) {
+            this.updateIfChanged(silentMode, this.platform.Characteristic.On, data.silentMode);
+        }
+        const unstoppable = this.services.get('unstoppable');
+        if (unstoppable) {
+            this.updateIfChanged(unstoppable, this.platform.Characteristic.On, data.bIntrptRangeDet);
+        }
+        const autoRecovery = this.services.get('autoRecovery');
+        if (autoRecovery) {
+            this.updateIfChanged(autoRecovery, this.platform.Characteristic.On, data.autoForceInit);
+        }
+        const youngCatMode = this.services.get('youngCatMode');
+        if (youngCatMode) {
+            this.updateIfChanged(youngCatMode, this.platform.Characteristic.On, data.youngCatMode);
+        }
         const binStateSensor = this.services.get('binState');
         if (binStateSensor) {
             const leakDetected = data.room_of_bin !== 0;
-            binStateSensor.updateCharacteristic(this.platform.Characteristic.LeakDetected, leakDetected ?
+            this.updateIfChanged(binStateSensor, this.platform.Characteristic.LeakDetected, leakDetected ?
                 this.platform.Characteristic.LeakDetected.LEAK_DETECTED :
                 this.platform.Characteristic.LeakDetected.LEAK_NOT_DETECTED);
             const binStateName = types_1.BinState[data.room_of_bin] || `Unknown (${data.room_of_bin})`;
-            binStateSensor.updateCharacteristic(this.platform.Characteristic.Name, binStateName);
+            this.updateIfChanged(binStateSensor, this.platform.Characteristic.Name, binStateName);
         }
         const wifiSensor = this.services.get('wifi');
         if (wifiSensor) {
-            const signalPercent = this.rssiToPercent(data.wifiRssi);
-            wifiSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, signalPercent);
+            this.updateIfChanged(wifiSensor, this.platform.Characteristic.CurrentRelativeHumidity, this.rssiToPercent(data.wifiRssi));
+        }
+        const sandSensor = this.services.get('sandLevelState');
+        if (sandSensor) {
+            const isInsufficient = data.sandLevelState === types_1.SandLevel.INSUFFICIENT;
+            this.updateIfChanged(sandSensor, this.platform.Characteristic.ContactSensorState, isInsufficient ?
+                this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+                this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED);
+            const sandStateName = types_1.SandLevelName[data.sandLevelState] || `Unknown (${data.sandLevelState})`;
+            this.updateIfChanged(sandSensor, this.platform.Characteristic.Name, sandStateName);
+        }
+        const faultSensor = this.services.get('faultAlert');
+        if (faultSensor) {
+            const isFaulted = FAULT_STATUSES.has(data.bucketStatus);
+            this.updateIfChanged(faultSensor, this.platform.Characteristic.MotionDetected, isFaulted);
+            if (isFaulted) {
+                this.platform.log.warn(`${this.deviceName} fault: ${types_1.BucketStatus[data.bucketStatus]}`);
+            }
         }
         if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
             this.updateCatSensors(data);
         }
+        this.previousData = data;
         this.platform.log.debug(`Updated ${this.deviceName}: Status=${types_1.BucketStatus[data.bucketStatus] || data.bucketStatus}, ` +
             `Sand=${data.sandLevelPercent}%, Bin=${types_1.BinState[data.room_of_bin] || data.room_of_bin}`);
     }
@@ -173,8 +261,12 @@ class NeakasaAccessory {
                 .sort((a, b) => b.end_time - a.end_time);
             if (catRecords.length > 0) {
                 const latestRecord = catRecords[0];
-                const weight = Math.min(100, Math.max(0, latestRecord.weight));
-                catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, weight);
+                let weight = latestRecord.weight;
+                if (this.config.useImperialUnits === true) {
+                    weight = weight * 2.20462;
+                }
+                const displayWeight = Math.min(100, Math.max(0, Math.round(weight)));
+                catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, displayWeight);
             }
         }
     }
@@ -195,18 +287,23 @@ class NeakasaAccessory {
         return this.deviceData?.cleanCfg?.active === 1;
     }
     async setChildLock(value) {
-        const newValue = value;
+        const locked = value === this.platform.Characteristic.LockTargetState.SECURED;
         try {
-            await this.platform.neakasaApi.setDeviceProperties(this.iotId, { childLockOnOff: newValue ? 1 : 0 });
-            this.platform.log.info(`Set Child Lock to ${newValue}`);
+            await this.platform.neakasaApi.setDeviceProperties(this.iotId, { childLockOnOff: locked ? 1 : 0 });
+            this.platform.log.info(`Set Child Lock to ${locked ? 'Locked' : 'Unlocked'}`);
+            this.services.get('childLock')?.updateCharacteristic(this.platform.Characteristic.LockCurrentState, locked ?
+                this.platform.Characteristic.LockCurrentState.SECURED :
+                this.platform.Characteristic.LockCurrentState.UNSECURED);
         }
         catch (error) {
             this.platform.log.error(`Failed to set Child Lock: ${error}`);
             throw new this.platform.api.hap.HapStatusError(-70402);
         }
     }
-    async getChildLock() {
-        return this.deviceData?.childLockOnOff || false;
+    async getChildLockState() {
+        return this.deviceData?.childLockOnOff ?
+            this.platform.Characteristic.LockCurrentState.SECURED :
+            this.platform.Characteristic.LockCurrentState.UNSECURED;
     }
     async setAutoBury(value) {
         const newValue = value;

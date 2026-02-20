@@ -106,6 +106,12 @@
         "default": false,
         "description": "Shows detailed sand level (Insufficient, Moderate, Sufficient, Overfilled). Shows as a Contact Sensor in HomeKit."
       },
+      "showFaultSensor": {
+        "title": "Fault / Jammed Alert Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Alerts when the device is stuck or has a fault (Panels Missing or Interrupted). Shows as a Motion Sensor in HomeKit — motion detected means a fault is active."
+      },
       "useImperialUnits": {
         "title": "Use Imperial Units (lbs)",
         "type": "boolean",
@@ -172,7 +178,8 @@
         "showBinStateSensor",
         "showWifiSensor",
         "showCatSensors",
-        "showSandLevelSensor"
+        "showSandLevelSensor",
+        "showFaultSensor"
       ]
     },
     {
