@@ -4,6 +4,7 @@ import { DeviceData, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPl
 
 const FAULT_STATUSES = new Set([6, 7]); // Panels Missing, Interrupted
 const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
+const ACTION_SWITCH_RESET_MS = 150;
 
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();
@@ -54,32 +55,51 @@ export class NeakasaAccessory {
     // Switch: Auto Clean
     this.addSwitch('autoClean', 'Auto Clean', 'auto-clean', this.setAutoClean, this.getAutoClean);
 
-    // Switch: Auto Level + Clean
-    this.addSwitch('autoLevelClean', 'Auto Level + Clean', 'auto-level-clean', this.setAutoLevelAndClean, this.getAutoLevelAndClean);
+    // Switch: Sync Auto Level With Auto Clean (optional)
+    this.addOptionalSwitch(
+      'autoLevelClean',
+      'Sync Auto Level With Auto Clean',
+      'auto-level-clean',
+      this.config.showAutoLevelClean,
+      this.setAutoLevelAndClean,
+      this.getAutoLevelAndClean,
+    );
 
-    // Button: Clean Now (stateless)
+    // Button: Run Clean Cycle (momentary action switch)
     const cleanSwitch = this.accessory.getService('clean-now') ||
-      this.accessory.addService(this.platform.Service.Switch, 'Clean Now', 'clean-now');
-    this.setServiceName(cleanSwitch, 'Clean Now');
+      this.accessory.addService(this.platform.Service.Switch, 'Run Clean Cycle', 'clean-now');
+    this.setServiceName(cleanSwitch, 'Run Clean Cycle');
     cleanSwitch.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.cleanNow.bind(this))
       .onGet(() => false);
-    this.services.set('clean', cleanSwitch);
+    this.services.set('runCleanCycle', cleanSwitch);
 
-    // Button: Level Now (stateless)
+    // Button: Run Leveling (momentary action switch)
     const levelSwitch = this.accessory.getService('level-now') ||
-      this.accessory.addService(this.platform.Service.Switch, 'Level Now', 'level-now');
-    this.setServiceName(levelSwitch, 'Level Now');
+      this.accessory.addService(this.platform.Service.Switch, 'Run Leveling', 'level-now');
+    this.setServiceName(levelSwitch, 'Run Leveling');
     levelSwitch.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.levelNow.bind(this))
       .onGet(() => false);
-    this.services.set('level', levelSwitch);
+    this.services.set('runLeveling', levelSwitch);
 
     // Status sensor (ContactSensor)
     const statusSensor = this.accessory.getService('device-status') ||
       this.accessory.addService(this.platform.Service.ContactSensor, 'Status', 'device-status');
     this.setServiceName(statusSensor, 'Status');
     this.services.set('status', statusSensor);
+
+    // Status sensor for last action result + timestamp
+    const lastActionSensor = this.accessory.getService('last-action') ||
+      this.accessory.addService(this.platform.Service.ContactSensor, 'Last Action', 'last-action');
+    this.setServiceName(lastActionSensor, 'Last Action');
+    this.updateIfChanged(
+      lastActionSensor,
+      this.platform.Characteristic.ContactSensorState,
+      this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
+    );
+    this.updateIfChanged(lastActionSensor, this.platform.Characteristic.Name, 'No recent actions');
+    this.services.set('lastAction', lastActionSensor);
 
     // Cat Present (OccupancySensor)
     const catPresentSensor = this.accessory.getService('cat-present') ||
@@ -216,6 +236,42 @@ export class NeakasaAccessory {
     }
   }
 
+  private resetActionSwitch(key: string): void {
+    setTimeout(() => {
+      const service = this.services.get(key);
+      if (!service) {
+        return;
+      }
+      service.updateCharacteristic(this.platform.Characteristic.On, false);
+    }, ACTION_SWITCH_RESET_MS);
+  }
+
+  private isCatPresent(): boolean {
+    return this.deviceData?.bucketStatus === 4;
+  }
+
+  private getActionTimestamp(): string {
+    return new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  }
+
+  private setLastActionResult(message: string, succeeded: boolean): void {
+    const lastActionService = this.services.get('lastAction');
+    if (!lastActionService) {
+      return;
+    }
+
+    const state = succeeded ?
+      this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED :
+      this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
+
+    this.updateIfChanged(lastActionService, this.platform.Characteristic.ContactSensorState, state);
+    this.updateIfChanged(
+      lastActionService,
+      this.platform.Characteristic.Name,
+      `${message} (${this.getActionTimestamp()})`,
+    );
+  }
+
   private rssiToPercent(rssi: number): number {
     if (rssi >= -50) {
       return 100;
@@ -249,11 +305,14 @@ export class NeakasaAccessory {
 
     // Core: Auto Clean
     this.updateIfChanged(this.services.get('autoClean')!, this.platform.Characteristic.On, data.cleanCfg?.active === 1);
-    this.updateIfChanged(
-      this.services.get('autoLevelClean')!,
-      this.platform.Characteristic.On,
-      data.cleanCfg?.active === 1 && data.autoLevel,
-    );
+    const autoLevelCleanService = this.services.get('autoLevelClean');
+    if (autoLevelCleanService) {
+      this.updateIfChanged(
+        autoLevelCleanService,
+        this.platform.Characteristic.On,
+        data.cleanCfg?.active === 1 && data.autoLevel,
+      );
+    }
 
     // Core: Status sensor
     const statusSensor = this.services.get('status')!;
@@ -429,9 +488,9 @@ export class NeakasaAccessory {
         cleanCfg,
         autoLevel: newValue ? 1 : 0,
       });
-      this.platform.log.info(`Set Auto Level + Clean to ${newValue}`);
+      this.platform.log.info(`Set Sync Auto Level With Auto Clean to ${newValue}`);
     } catch (error) {
-      this.platform.log.error(`Failed to set Auto Level + Clean: ${error}`);
+      this.platform.log.error(`Failed to set Sync Auto Level With Auto Clean: ${error}`);
       throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
@@ -555,32 +614,52 @@ export class NeakasaAccessory {
   }
 
   async cleanNow(value: CharacteristicValue): Promise<void> {
-    if (value) {
-      try {
-        await this.platform.neakasaApi.cleanNow(this.iotId);
-        this.platform.log.info(`Triggered clean for ${this.deviceName}`);
-        setTimeout(() => {
-          this.services.get('clean')!.updateCharacteristic(this.platform.Characteristic.On, false);
-        }, 1000);
-      } catch (error) {
-        this.platform.log.error(`Failed to trigger clean: ${error}`);
-        throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-      }
+    if (!value) {
+      return;
+    }
+
+    this.resetActionSwitch('runCleanCycle');
+
+    if (this.isCatPresent()) {
+      const message = `Blocked Run Clean Cycle for ${this.deviceName} because cat presence is active`;
+      this.platform.log.warn(message);
+      this.setLastActionResult('Run Clean Cycle blocked: cat present', false);
+      return;
+    }
+
+    try {
+      await this.platform.neakasaApi.cleanNow(this.iotId);
+      this.platform.log.info(`Triggered Run Clean Cycle for ${this.deviceName}`);
+      this.setLastActionResult('Run Clean Cycle started', true);
+    } catch (error) {
+      this.platform.log.error(`Failed to trigger Run Clean Cycle: ${error}`);
+      this.setLastActionResult('Run Clean Cycle failed', false);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
 
   async levelNow(value: CharacteristicValue): Promise<void> {
-    if (value) {
-      try {
-        await this.platform.neakasaApi.sandLeveling(this.iotId);
-        this.platform.log.info(`Triggered leveling for ${this.deviceName}`);
-        setTimeout(() => {
-          this.services.get('level')!.updateCharacteristic(this.platform.Characteristic.On, false);
-        }, 1000);
-      } catch (error) {
-        this.platform.log.error(`Failed to trigger leveling: ${error}`);
-        throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-      }
+    if (!value) {
+      return;
+    }
+
+    this.resetActionSwitch('runLeveling');
+
+    if (this.isCatPresent()) {
+      const message = `Blocked Run Leveling for ${this.deviceName} because cat presence is active`;
+      this.platform.log.warn(message);
+      this.setLastActionResult('Run Leveling blocked: cat present', false);
+      return;
+    }
+
+    try {
+      await this.platform.neakasaApi.sandLeveling(this.iotId);
+      this.platform.log.info(`Triggered Run Leveling for ${this.deviceName}`);
+      this.setLastActionResult('Run Leveling started', true);
+    } catch (error) {
+      this.platform.log.error(`Failed to trigger Run Leveling: ${error}`);
+      this.setLastActionResult('Run Leveling failed', false);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
 
@@ -596,8 +675,10 @@ export class NeakasaAccessory {
 
     if (Date.now() > this.emptyBinConfirmUntil) {
       this.emptyBinConfirmUntil = Date.now() + EMPTY_BIN_CONFIRM_WINDOW_MS;
+      const confirmSeconds = EMPTY_BIN_CONFIRM_WINDOW_MS / 1000;
       this.platform.log.warn(
-        `Empty Bin confirmation armed for ${this.deviceName}. Tap "Empty Bin" again within ${EMPTY_BIN_CONFIRM_WINDOW_MS / 1000}s to confirm.`,
+        `Empty Bin confirmation armed for ${this.deviceName}. ` +
+        `Tap "Empty Bin" again within ${confirmSeconds}s to confirm.`,
       );
       setTimeout(() => {
         emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);

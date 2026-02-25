@@ -16,6 +16,7 @@ const DEFAULT_POLL_INTERVAL_SECONDS = 60;
 const DEFAULT_STARTUP_BEHAVIOR: StartupBehavior = 'immediate';
 
 const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
+  'showAutoLevelClean',
   'showChildLock',
   'showEmptyBin',
   'showAutoBury',
@@ -33,6 +34,7 @@ const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
 ];
 
 const FEATURE_LABELS: Record<keyof FeatureVisibilityConfig, string> = {
+  showAutoLevelClean: 'Sync Auto Level With Auto Clean',
   showChildLock: 'Child Lock',
   showEmptyBin: 'Empty Bin',
   showAutoBury: 'Auto Bury',
@@ -423,6 +425,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
   private getFeatureConfig(iotId: string): FeatureVisibilityConfig {
     const base: FeatureVisibilityConfig = {
+      showAutoLevelClean: this.config.showAutoLevelClean === true,
       showChildLock: this.config.showChildLock === true,
       showEmptyBin: this.config.showEmptyBin === true,
       showAutoBury: this.config.showAutoBury === true,

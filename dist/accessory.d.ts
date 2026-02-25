@@ -18,6 +18,10 @@ export declare class NeakasaAccessory {
     private addSwitch;
     private addOptionalSwitch;
     private removeServiceIfExists;
+    private resetActionSwitch;
+    private isCatPresent;
+    private getActionTimestamp;
+    private setLastActionResult;
     private rssiToPercent;
     updateData(data: DeviceData): Promise<void>;
     private updateCatSensors;

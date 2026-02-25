@@ -17,17 +17,18 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 | **Cat Present** | Occupancy Sensor | Detects when a cat is in the litter box |
 | **Waste Bin Full** | Occupancy Sensor | Alerts when the waste bin needs emptying |
 | **Status** | Contact Sensor | Shows device state (Idle, Cleaning, Cat Present, etc.) |
+| **Last Action** | Contact Sensor | Shows the most recent action result and timestamp |
 | **Litter Level** | Filter Maintenance | Sand level percentage with low-level alert |
 | **Auto Clean** | Switch | Toggle automatic cleaning on/off |
-| **Auto Level + Clean** | Switch | Toggle auto clean and auto level together |
-| **Clean Now** | Switch (button) | Trigger an immediate cleaning cycle |
-| **Level Now** | Switch (button) | Trigger an immediate sand leveling cycle |
+| **Run Clean Cycle** | Switch (momentary) | Trigger an immediate cleaning cycle (auto-resets) |
+| **Run Leveling** | Switch (momentary) | Trigger an immediate sand leveling cycle (auto-resets) |
 
 ### Optional Switches (off by default)
 
 | Switch | Description |
 |--------|-------------|
 | **Child Lock** | Prevents manual operation (shows as a Lock in HomeKit) |
+| **Sync Auto Level With Auto Clean** | Toggle Auto Clean and Auto Level together in one switch |
 | **Empty Bin** | Marks the waste bin as emptied (requires 2 taps within 10s to confirm) |
 | **Auto Bury** | Automatically covers waste after cat use |
 | **Auto Level** | Automatically levels litter after cleaning |
@@ -49,6 +50,8 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 > **Note:** WiFi Signal and Cat Weight sensors appear as Humidity Sensors in HomeKit because HomeKit has no generic number sensor type. This is a common Homebridge workaround.
 
 > **Note:** The Fault Alert sensor uses Motion Sensor — "motion detected" means a fault is active. Use it to trigger HomeKit notifications or automations when the device jams or loses its panels.
+
+> **Note:** `Run Clean Cycle` and `Run Leveling` are intentionally momentary action switches. They reset back to off right after the command is sent and are blocked when `Cat Present` is active.
 
 #### Cat Weight Sensors
 
@@ -121,6 +124,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, hidden status, polling, and feature flags |
 | `debug` | No | `false` | Enable debug logging |
 | `showChildLock` | No | `false` | Show Child Lock (Lock) |
+| `showAutoLevelClean` | No | `false` | Show Sync Auto Level With Auto Clean helper switch |
 | `showEmptyBin` | No | `false` | Show Empty Bin action switch (2-tap confirm within 10s) |
 | `showAutoBury` | No | `false` | Show Auto Bury switch |
 | `showAutoLevel` | No | `false` | Show Auto Level switch |

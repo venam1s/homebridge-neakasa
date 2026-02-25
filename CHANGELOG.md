@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-02-25
+
+### Added
+- New core `Last Action` sensor that records the latest command result with timestamp.
+- New optional `Sync Auto Level With Auto Clean` switch (`showAutoLevelClean`, default `false`) for users who want one-toggle behavior.
+- Safety guardrails: `Run Clean Cycle` and `Run Leveling` are blocked while cat presence is active.
+
+### Changed
+- Renamed action switches for clarity: `Clean Now` -> `Run Clean Cycle`, `Level Now` -> `Run Leveling`.
+- Action switches now behave as tighter momentary controls and reset immediately after triggering.
+- `Auto Level + Clean` moved out of core and into optional switches for a simpler default accessory layout.
+- Updated config schema and README documentation for the new naming and feature visibility behavior.
+
 ## [1.7.0] - 2026-02-25
 
 ### Added

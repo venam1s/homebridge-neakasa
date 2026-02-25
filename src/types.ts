@@ -3,6 +3,7 @@ import { PlatformConfig } from 'homebridge';
 export type StartupBehavior = 'immediate' | 'skipInitialUpdate';
 
 export interface FeatureVisibilityConfig {
+  showAutoLevelClean: boolean;
   showChildLock: boolean;
   showEmptyBin: boolean;
   showAutoBury: boolean;
@@ -37,6 +38,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   startupDelaySeconds?: number;
   deviceOverrides?: DeviceOverrideConfig[];
   // Optional switches (all default false)
+  showAutoLevelClean?: boolean;
   showChildLock?: boolean;
   showEmptyBin?: boolean;
   showAutoBury?: boolean;

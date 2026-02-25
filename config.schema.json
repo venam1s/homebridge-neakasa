@@ -58,6 +58,12 @@
         "default": false,
         "description": "Prevents the device from being operated manually. Shows as a Lock in HomeKit."
       },
+      "showAutoLevelClean": {
+        "title": "Sync Auto Level With Auto Clean",
+        "type": "boolean",
+        "default": false,
+        "description": "Adds a helper switch that toggles Auto Clean and Auto Level together."
+      },
       "showEmptyBin": {
         "title": "Empty Bin Switch",
         "type": "boolean",
@@ -172,6 +178,10 @@
               "title": "Child Lock",
               "type": "boolean"
             },
+            "showAutoLevelClean": {
+              "title": "Sync Auto Level With Auto Clean",
+              "type": "boolean"
+            },
             "showEmptyBin": {
               "title": "Empty Bin Switch",
               "type": "boolean"
@@ -232,6 +242,10 @@
               "properties": {
                 "showChildLock": {
                   "title": "Child Lock",
+                  "type": "boolean"
+                },
+                "showAutoLevelClean": {
+                  "title": "Sync Auto Level With Auto Clean",
                   "type": "boolean"
                 },
                 "showEmptyBin": {
