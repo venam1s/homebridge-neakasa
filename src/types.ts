@@ -1,11 +1,40 @@
 import { PlatformConfig } from 'homebridge';
 
+export type StartupBehavior = 'immediate' | 'skipInitialUpdate';
+
+export interface FeatureVisibilityConfig {
+  showChildLock: boolean;
+  showAutoBury: boolean;
+  showAutoLevel: boolean;
+  showSilentMode: boolean;
+  showUnstoppableCycle: boolean;
+  showAutoRecovery: boolean;
+  showYoungCatMode: boolean;
+  showBinStateSensor: boolean;
+  showWifiSensor: boolean;
+  showCatSensors: boolean;
+  showSandLevelSensor: boolean;
+  showFaultSensor: boolean;
+  useImperialUnits: boolean;
+}
+
+export interface DeviceOverrideConfig {
+  iotId: string;
+  name?: string;
+  hidden?: boolean;
+  pollInterval?: number;
+  features?: Partial<FeatureVisibilityConfig>;
+}
+
 export interface NeakasaPlatformConfig extends PlatformConfig {
   username: string;
   password: string;
   pollInterval?: number;
   debug?: boolean;
   deviceName?: string;
+  startupBehavior?: StartupBehavior;
+  startupDelaySeconds?: number;
+  deviceOverrides?: DeviceOverrideConfig[];
   // Optional switches (all default false)
   showChildLock?: boolean;
   showAutoBury?: boolean;
@@ -146,4 +175,3 @@ export const BinState: Record<number, string> = {
   1: 'Full',
   2: 'Missing',
 };
-

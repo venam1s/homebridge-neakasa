@@ -45,7 +45,15 @@ export class IoTClient {
     return crypto.createHash('md5').update(content).digest('base64');
   }
 
-  private getSignature(method: string, accept: string, contentMD5: string, contentType: string, date: string, headers: Record<string, string>, pathname: string): string {
+  private getSignature(
+    method: string,
+    accept: string,
+    contentMD5: string,
+    contentType: string,
+    date: string,
+    headers: Record<string, string>,
+    pathname: string,
+  ): string {
     const excludeHeaders = new Set([
       'x-ca-signature', 'x-ca-signature-headers', 'accept', 'content-md5',
       'content-type', 'date', 'host', 'user-agent', 'token',

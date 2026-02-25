@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-02-25
+
+### Added
+- Advanced startup controls: `startupBehavior` (`immediate` / `skipInitialUpdate`) and `startupDelaySeconds`.
+- Per-device overrides (`deviceOverrides`) with support for `name`, `hidden`, per-device `pollInterval`, and per-feature visibility overrides.
+- Startup diagnostics log line showing effective startup polling settings.
+- Boot-time detected devices summary including mapped features, hidden state, and effective poll interval.
+
+### Changed
+- Polling scheduler now supports mixed per-device polling intervals in one platform instance.
+- Config validation and sanitization now warn on invalid values and duplicate/unknown override entries.
+- Config UI schema and README updated for new startup and per-device override options.
+
 ## [1.5.1] - 2026-02-20
 
 ### Fixed

@@ -91,6 +91,9 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "username": "your@email.com",
       "password": "your_password",
       "pollInterval": 60,
+      "startupBehavior": "immediate",
+      "startupDelaySeconds": 0,
+      "deviceOverrides": [],
       "debug": false
     }
   ]
@@ -107,6 +110,9 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `password` | Yes | — | Your Neakasa account password |
 | `deviceName` | No | `"Neakasa M1"` | Display name in HomeKit |
 | `pollInterval` | No | `60` | Update interval in seconds (min: 30) |
+| `startupBehavior` | No | `"immediate"` | Startup refresh mode: `immediate` or `skipInitialUpdate` |
+| `startupDelaySeconds` | No | `0` | Delay initial refresh at startup (seconds) |
+| `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, hidden status, polling, and feature flags |
 | `debug` | No | `false` | Enable debug logging |
 | `showChildLock` | No | `false` | Show Child Lock (Lock) |
 | `showAutoBury` | No | `false` | Show Auto Bury switch |
@@ -121,6 +127,33 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
 | `showFaultSensor` | No | `false` | Show Fault Alert sensor (Motion Sensor) |
 | `useImperialUnits` | No | `false` | Display cat weight in lbs instead of kg |
+
+### Per-Device Overrides Example
+
+```json
+{
+  "platform": "Neakasa",
+  "name": "Neakasa",
+  "username": "your@email.com",
+  "password": "your_password",
+  "pollInterval": 60,
+  "startupBehavior": "immediate",
+  "startupDelaySeconds": 5,
+  "deviceOverrides": [
+    {
+      "iotId": "abcdef123456",
+      "name": "Upstairs Litter Box",
+      "hidden": false,
+      "pollInterval": 30,
+      "features": {
+        "showFaultSensor": true,
+        "showWifiSensor": true,
+        "showCatSensors": false
+      }
+    }
+  ]
+}
+```
 
 ## HomeKit Automation Ideas
 

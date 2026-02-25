@@ -27,6 +27,20 @@
         "minimum": 30,
         "description": "How often to check for updates from the Neakasa cloud"
       },
+      "startupBehavior": {
+        "title": "Startup Behavior",
+        "type": "string",
+        "default": "immediate",
+        "enum": ["immediate", "skipInitialUpdate"],
+        "description": "Control what happens after Homebridge starts: refresh right away, or wait for the first scheduled poll"
+      },
+      "startupDelaySeconds": {
+        "title": "Startup Delay (seconds)",
+        "type": "integer",
+        "default": 0,
+        "minimum": 0,
+        "description": "Delay the initial refresh on startup (only used when Startup Behavior is immediate)"
+      },
       "deviceName": {
         "title": "Device Name",
         "type": "string",
@@ -115,6 +129,101 @@
         "type": "boolean",
         "default": false,
         "description": "Display cat weight in pounds instead of kilograms. Note: Weight is shown as a percentage (%) in HomeKit due to sensor limitations."
+      },
+      "deviceOverrides": {
+        "title": "Per-Device Overrides",
+        "type": "array",
+        "default": [],
+        "description": "Override polling interval, HomeKit name, hidden state, and feature flags for specific devices by iotId",
+        "items": {
+          "type": "object",
+          "required": ["iotId"],
+          "additionalProperties": false,
+          "properties": {
+            "iotId": {
+              "title": "Device iotId",
+              "type": "string",
+              "description": "Exact Neakasa device iotId to override"
+            },
+            "name": {
+              "title": "Name Override",
+              "type": "string",
+              "description": "Optional HomeKit display name override"
+            },
+            "hidden": {
+              "title": "Hide Accessory",
+              "type": "boolean",
+              "default": false,
+              "description": "Do not expose this device in HomeKit"
+            },
+            "pollInterval": {
+              "title": "Poll Interval (seconds)",
+              "type": "integer",
+              "minimum": 30,
+              "description": "Override poll interval for this device (min: 30)"
+            },
+            "features": {
+              "title": "Feature Overrides",
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Set true/false to enable or disable individual optional features for this device",
+              "properties": {
+                "showChildLock": {
+                  "title": "Child Lock",
+                  "type": "boolean"
+                },
+                "showAutoBury": {
+                  "title": "Auto Bury Switch",
+                  "type": "boolean"
+                },
+                "showAutoLevel": {
+                  "title": "Auto Level Switch",
+                  "type": "boolean"
+                },
+                "showSilentMode": {
+                  "title": "Silent Mode Switch",
+                  "type": "boolean"
+                },
+                "showUnstoppableCycle": {
+                  "title": "Unstoppable Cycle Switch",
+                  "type": "boolean"
+                },
+                "showAutoRecovery": {
+                  "title": "Auto Recovery Switch",
+                  "type": "boolean"
+                },
+                "showYoungCatMode": {
+                  "title": "Young Cat Mode Switch",
+                  "type": "boolean"
+                },
+                "showBinStateSensor": {
+                  "title": "Bin State Sensor",
+                  "type": "boolean"
+                },
+                "showWifiSensor": {
+                  "title": "WiFi Signal Sensor",
+                  "type": "boolean"
+                },
+                "showCatSensors": {
+                  "title": "Cat Weight Sensors",
+                  "type": "boolean"
+                },
+                "showSandLevelSensor": {
+                  "title": "Sand Level Sensor",
+                  "type": "boolean"
+                },
+                "showFaultSensor": {
+                  "title": "Fault Sensor",
+                  "type": "boolean"
+                },
+                "useImperialUnits": {
+                  "title": "Use Imperial Units (lbs)",
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -142,7 +251,15 @@
           "flex": "1 1 50%"
         },
         {
+          "key": "startupBehavior",
+          "flex": "1 1 50%"
+        },
+        {
           "key": "pollInterval",
+          "flex": "1 1 50%"
+        },
+        {
+          "key": "startupDelaySeconds",
           "flex": "1 1 50%"
         }
       ]
@@ -178,6 +295,14 @@
         "showCatSensors",
         "showSandLevelSensor",
         "showFaultSensor"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Per-Device Overrides",
+      "expandable": true,
+      "items": [
+        "deviceOverrides"
       ]
     },
     {
