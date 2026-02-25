@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NeakasaAccessory = void 0;
 const types_1 = require("./types");
 const FAULT_STATUSES = new Set([6, 7]);
+const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
 class NeakasaAccessory {
     constructor(platform, accessory, iotId, deviceName, config) {
         this.platform = platform;
@@ -10,6 +11,7 @@ class NeakasaAccessory {
         this.iotId = iotId;
         this.deviceName = deviceName;
         this.services = new Map();
+        this.emptyBinConfirmUntil = 0;
         this.config = config;
         this.accessory.getService(this.platform.Service.AccessoryInformation)
             .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Neakasa')
@@ -73,6 +75,18 @@ class NeakasaAccessory {
         }
         else {
             this.removeServiceIfExists('child-lock');
+        }
+        if (this.config.showEmptyBin === true) {
+            const emptyBinSwitch = this.accessory.getService('empty-bin') ||
+                this.accessory.addService(this.platform.Service.Switch, 'Empty Bin', 'empty-bin');
+            this.setServiceName(emptyBinSwitch, 'Empty Bin');
+            emptyBinSwitch.getCharacteristic(this.platform.Characteristic.On)
+                .onSet(this.emptyBin.bind(this))
+                .onGet(() => false);
+            this.services.set('emptyBin', emptyBinSwitch);
+        }
+        else {
+            this.removeServiceIfExists('empty-bin');
         }
         this.addOptionalSwitch('autoBury', 'Auto Bury', 'auto-bury', this.config.showAutoBury, this.setAutoBury, this.getAutoBury);
         this.addOptionalSwitch('autoLevel', 'Auto Level', 'auto-level', this.config.showAutoLevel, this.setAutoLevel, this.getAutoLevel);
@@ -440,6 +454,36 @@ class NeakasaAccessory {
                 this.platform.log.error(`Failed to trigger leveling: ${error}`);
                 throw new this.platform.api.hap.HapStatusError(-70402);
             }
+        }
+    }
+    async emptyBin(value) {
+        if (!value) {
+            return;
+        }
+        const emptyBinSwitch = this.services.get('emptyBin');
+        if (!emptyBinSwitch) {
+            return;
+        }
+        if (Date.now() > this.emptyBinConfirmUntil) {
+            this.emptyBinConfirmUntil = Date.now() + EMPTY_BIN_CONFIRM_WINDOW_MS;
+            this.platform.log.warn(`Empty Bin confirmation armed for ${this.deviceName}. Tap "Empty Bin" again within ${EMPTY_BIN_CONFIRM_WINDOW_MS / 1000}s to confirm.`);
+            setTimeout(() => {
+                emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);
+            }, 800);
+            return;
+        }
+        try {
+            await this.platform.neakasaApi.emptyBin(this.iotId);
+            this.platform.log.info(`Marked waste bin as emptied for ${this.deviceName}`);
+            this.emptyBinConfirmUntil = 0;
+            setTimeout(() => {
+                emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);
+            }, 800);
+        }
+        catch (error) {
+            this.emptyBinConfirmUntil = 0;
+            this.platform.log.error(`Failed to mark bin as emptied: ${error}`);
+            throw new this.platform.api.hap.HapStatusError(-70402);
         }
     }
 }

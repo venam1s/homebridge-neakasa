@@ -28,6 +28,7 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 | Switch | Description |
 |--------|-------------|
 | **Child Lock** | Prevents manual operation (shows as a Lock in HomeKit) |
+| **Empty Bin** | Marks the waste bin as emptied (requires 2 taps within 10s to confirm) |
 | **Auto Bury** | Automatically covers waste after cat use |
 | **Auto Level** | Automatically levels litter after cleaning |
 | **Silent Mode** | Reduces motor noise during operation |
@@ -120,6 +121,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, hidden status, polling, and feature flags |
 | `debug` | No | `false` | Enable debug logging |
 | `showChildLock` | No | `false` | Show Child Lock (Lock) |
+| `showEmptyBin` | No | `false` | Show Empty Bin action switch (2-tap confirm within 10s) |
 | `showAutoBury` | No | `false` | Show Auto Bury switch |
 | `showAutoLevel` | No | `false` | Show Auto Level switch |
 | `showSilentMode` | No | `false` | Show Silent Mode switch |

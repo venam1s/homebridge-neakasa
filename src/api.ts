@@ -426,6 +426,11 @@ export class NeakasaAPI {
     await this.invokeService(iotId, 'sandLeveling', { bStartLeveling: 1 });
   }
 
+  async emptyBin(iotId: string): Promise<void> {
+    // Clearing this flag acknowledges that the waste bin was emptied.
+    await this.setDeviceProperties(iotId, { binFullWaitReset: 0 });
+  }
+
   async getRecords(deviceName: string): Promise<RecordsResponse> {
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = this.getSignature(timestamp.toString());

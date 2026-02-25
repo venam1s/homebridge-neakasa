@@ -9,6 +9,7 @@ const DEFAULT_POLL_INTERVAL_SECONDS = 60;
 const DEFAULT_STARTUP_BEHAVIOR = 'immediate';
 const FEATURE_KEYS = [
     'showChildLock',
+    'showEmptyBin',
     'showAutoBury',
     'showAutoLevel',
     'showSilentMode',
@@ -24,6 +25,7 @@ const FEATURE_KEYS = [
 ];
 const FEATURE_LABELS = {
     showChildLock: 'Child Lock',
+    showEmptyBin: 'Empty Bin',
     showAutoBury: 'Auto Bury',
     showAutoLevel: 'Auto Level',
     showSilentMode: 'Silent Mode',
@@ -338,6 +340,7 @@ class NeakasaPlatform {
     getFeatureConfig(iotId) {
         const base = {
             showChildLock: this.config.showChildLock === true,
+            showEmptyBin: this.config.showEmptyBin === true,
             showAutoBury: this.config.showAutoBury === true,
             showAutoLevel: this.config.showAutoLevel === true,
             showSilentMode: this.config.showSilentMode === true,

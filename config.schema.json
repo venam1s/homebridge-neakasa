@@ -58,6 +58,12 @@
         "default": false,
         "description": "Prevents the device from being operated manually. Shows as a Lock in HomeKit."
       },
+      "showEmptyBin": {
+        "title": "Empty Bin Switch",
+        "type": "boolean",
+        "default": false,
+        "description": "Adds an Empty Bin action switch. Requires two taps within 10 seconds to confirm."
+      },
       "showAutoBury": {
         "title": "Auto Bury Switch",
         "type": "boolean",
@@ -166,6 +172,10 @@
               "title": "Child Lock",
               "type": "boolean"
             },
+            "showEmptyBin": {
+              "title": "Empty Bin Switch",
+              "type": "boolean"
+            },
             "showAutoBury": {
               "title": "Auto Bury Switch",
               "type": "boolean"
@@ -222,6 +232,10 @@
               "properties": {
                 "showChildLock": {
                   "title": "Child Lock",
+                  "type": "boolean"
+                },
+                "showEmptyBin": {
+                  "title": "Empty Bin Switch",
                   "type": "boolean"
                 },
                 "showAutoBury": {
@@ -329,6 +343,7 @@
       "expandable": true,
       "items": [
         "showChildLock",
+        "showEmptyBin",
         "showAutoBury",
         "showAutoLevel",
         "showSilentMode",
@@ -368,6 +383,7 @@
               "expandable": true,
               "items": [
                 "deviceOverrides[].showChildLock",
+                "deviceOverrides[].showEmptyBin",
                 "deviceOverrides[].showAutoBury",
                 "deviceOverrides[].showAutoLevel",
                 "deviceOverrides[].showSilentMode",

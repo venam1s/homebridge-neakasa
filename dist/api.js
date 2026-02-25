@@ -405,6 +405,9 @@ class NeakasaAPI {
     async sandLeveling(iotId) {
         await this.invokeService(iotId, 'sandLeveling', { bStartLeveling: 1 });
     }
+    async emptyBin(iotId) {
+        await this.setDeviceProperties(iotId, { binFullWaitReset: 0 });
+    }
     async getRecords(deviceName) {
         const timestamp = Math.floor(Date.now() / 1000);
         const signature = this.getSignature(timestamp.toString());

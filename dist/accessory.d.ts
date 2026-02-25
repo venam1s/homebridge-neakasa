@@ -9,6 +9,7 @@ export declare class NeakasaAccessory {
     private services;
     private deviceData?;
     private previousData?;
+    private emptyBinConfirmUntil;
     private readonly config;
     constructor(platform: NeakasaPlatform, accessory: PlatformAccessory, iotId: string, deviceName: string, config: NeakasaPlatformConfig);
     private setServiceName;
@@ -40,5 +41,6 @@ export declare class NeakasaAccessory {
     getYoungCatMode(): Promise<CharacteristicValue>;
     cleanNow(value: CharacteristicValue): Promise<void>;
     levelNow(value: CharacteristicValue): Promise<void>;
+    emptyBin(value: CharacteristicValue): Promise<void>;
 }
 //# sourceMappingURL=accessory.d.ts.map

@@ -3,11 +3,13 @@ import { NeakasaPlatform } from './platform';
 import { DeviceData, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
 
 const FAULT_STATUSES = new Set([6, 7]); // Panels Missing, Interrupted
+const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
 
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();
   private deviceData?: DeviceData;
   private previousData?: DeviceData;
+  private emptyBinConfirmUntil = 0;
   private readonly config: NeakasaPlatformConfig;
 
   constructor(
@@ -105,6 +107,18 @@ export class NeakasaAccessory {
       this.services.set('childLock', lockService);
     } else {
       this.removeServiceIfExists('child-lock');
+    }
+
+    if (this.config.showEmptyBin === true) {
+      const emptyBinSwitch = this.accessory.getService('empty-bin') ||
+        this.accessory.addService(this.platform.Service.Switch, 'Empty Bin', 'empty-bin');
+      this.setServiceName(emptyBinSwitch, 'Empty Bin');
+      emptyBinSwitch.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.emptyBin.bind(this))
+        .onGet(() => false);
+      this.services.set('emptyBin', emptyBinSwitch);
+    } else {
+      this.removeServiceIfExists('empty-bin');
     }
 
     this.addOptionalSwitch('autoBury', 'Auto Bury', 'auto-bury',
@@ -567,6 +581,41 @@ export class NeakasaAccessory {
         this.platform.log.error(`Failed to trigger leveling: ${error}`);
         throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
       }
+    }
+  }
+
+  async emptyBin(value: CharacteristicValue): Promise<void> {
+    if (!value) {
+      return;
+    }
+
+    const emptyBinSwitch = this.services.get('emptyBin');
+    if (!emptyBinSwitch) {
+      return;
+    }
+
+    if (Date.now() > this.emptyBinConfirmUntil) {
+      this.emptyBinConfirmUntil = Date.now() + EMPTY_BIN_CONFIRM_WINDOW_MS;
+      this.platform.log.warn(
+        `Empty Bin confirmation armed for ${this.deviceName}. Tap "Empty Bin" again within ${EMPTY_BIN_CONFIRM_WINDOW_MS / 1000}s to confirm.`,
+      );
+      setTimeout(() => {
+        emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);
+      }, 800);
+      return;
+    }
+
+    try {
+      await this.platform.neakasaApi.emptyBin(this.iotId);
+      this.platform.log.info(`Marked waste bin as emptied for ${this.deviceName}`);
+      this.emptyBinConfirmUntil = 0;
+      setTimeout(() => {
+        emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);
+      }, 800);
+    } catch (error) {
+      this.emptyBinConfirmUntil = 0;
+      this.platform.log.error(`Failed to mark bin as emptied: ${error}`);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
 }

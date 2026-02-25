@@ -4,6 +4,7 @@ export type StartupBehavior = 'immediate' | 'skipInitialUpdate';
 
 export interface FeatureVisibilityConfig {
   showChildLock: boolean;
+  showEmptyBin: boolean;
   showAutoBury: boolean;
   showAutoLevel: boolean;
   showSilentMode: boolean;
@@ -37,6 +38,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   deviceOverrides?: DeviceOverrideConfig[];
   // Optional switches (all default false)
   showChildLock?: boolean;
+  showEmptyBin?: boolean;
   showAutoBury?: boolean;
   showAutoLevel?: boolean;
   showSilentMode?: boolean;
