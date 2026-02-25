@@ -6,6 +6,8 @@ Homebridge plugin for the **Neakasa M1 Cat Litter Box**. Monitor and control you
 
 Ported from the [Home Assistant Neakasa Integration](https://github.com/timniklas/hass-neakasa) by [@timniklas](https://github.com/timniklas).
 
+For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md).
+
 ## Features
 
 ### Core Services (always shown)
@@ -66,14 +68,16 @@ You can enable **Imperial Units** to display weights in **pounds** instead (e.g.
 
 ## Installation
 
-### Homebridge UI (Recommended)
+For guided setup (install, configure, verify), see the [Quickstart Guide](./QUICKSTART.md).
+
+### Homebridge UI
 
 1. Search for **"Neakasa"** in the Homebridge Config UI X plugin search
 2. Click Install
 3. Configure your Neakasa account credentials in the plugin settings
 4. Restart Homebridge
 
-### Manual Installation
+### Command Line
 
 ```bash
 npm install -g homebridge-neakasa
