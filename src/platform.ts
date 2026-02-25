@@ -370,12 +370,18 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         (this.validatePollInterval(globalPollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS);
 
       const features: Partial<FeatureVisibilityConfig> = {};
-      if (override.features && typeof override.features === 'object') {
-        for (const key of FEATURE_KEYS) {
-          const rawValue = override.features[key];
-          if (typeof rawValue === 'boolean') {
-            features[key] = rawValue;
-          }
+      for (const key of FEATURE_KEYS) {
+        const flatValue = override[key];
+        if (typeof flatValue === 'boolean') {
+          features[key] = flatValue;
+          continue;
+        }
+
+        const nestedValue = override.features && typeof override.features === 'object'
+          ? override.features[key]
+          : undefined;
+        if (typeof nestedValue === 'boolean') {
+          features[key] = nestedValue;
         }
       }
 

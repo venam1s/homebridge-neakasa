@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-02-25
+
+### Added
+- New core `Auto Level + Clean` switch to toggle both auto-leveling and auto-clean in one control.
+
+### Changed
+- Per-device override settings in the Homebridge Config UI now expose feature toggles directly in each override row.
+- Per-device override parsing now supports both flat feature flags and legacy nested `features` objects for backward compatibility.
+
 ## [1.6.0] - 2026-02-25
 
 ### Added

@@ -33,6 +33,7 @@ class NeakasaAccessory {
         this.setServiceName(binSensor, 'Waste Bin Full');
         this.services.set('binFull', binSensor);
         this.addSwitch('autoClean', 'Auto Clean', 'auto-clean', this.setAutoClean, this.getAutoClean);
+        this.addSwitch('autoLevelClean', 'Auto Level + Clean', 'auto-level-clean', this.setAutoLevelAndClean, this.getAutoLevelAndClean);
         const cleanSwitch = this.accessory.getService('clean-now') ||
             this.accessory.addService(this.platform.Service.Switch, 'Clean Now', 'clean-now');
         this.setServiceName(cleanSwitch, 'Clean Now');
@@ -161,6 +162,7 @@ class NeakasaAccessory {
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
         this.updateIfChanged(this.services.get('autoClean'), this.platform.Characteristic.On, data.cleanCfg?.active === 1);
+        this.updateIfChanged(this.services.get('autoLevelClean'), this.platform.Characteristic.On, data.cleanCfg?.active === 1 && data.autoLevel);
         const statusSensor = this.services.get('status');
         const isActive = data.bucketStatus !== 0;
         this.updateIfChanged(statusSensor, this.platform.Characteristic.ContactSensorState, isActive ?
@@ -285,6 +287,27 @@ class NeakasaAccessory {
     }
     async getAutoClean() {
         return this.deviceData?.cleanCfg?.active === 1;
+    }
+    async setAutoLevelAndClean(value) {
+        const newValue = value;
+        try {
+            const cleanCfg = {
+                ...(this.deviceData?.cleanCfg || {}),
+                active: newValue ? 1 : 0,
+            };
+            await this.platform.neakasaApi.setDeviceProperties(this.iotId, {
+                cleanCfg,
+                autoLevel: newValue ? 1 : 0,
+            });
+            this.platform.log.info(`Set Auto Level + Clean to ${newValue}`);
+        }
+        catch (error) {
+            this.platform.log.error(`Failed to set Auto Level + Clean: ${error}`);
+            throw new this.platform.api.hap.HapStatusError(-70402);
+        }
+    }
+    async getAutoLevelAndClean() {
+        return this.deviceData?.cleanCfg?.active === 1 && this.deviceData?.autoLevel === true;
     }
     async setChildLock(value) {
         const locked = value === this.platform.Characteristic.LockTargetState.SECURED;

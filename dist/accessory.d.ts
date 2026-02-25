@@ -22,6 +22,8 @@ export declare class NeakasaAccessory {
     private updateCatSensors;
     setAutoClean(value: CharacteristicValue): Promise<void>;
     getAutoClean(): Promise<CharacteristicValue>;
+    setAutoLevelAndClean(value: CharacteristicValue): Promise<void>;
+    getAutoLevelAndClean(): Promise<CharacteristicValue>;
     setChildLock(value: CharacteristicValue): Promise<void>;
     getChildLockState(): Promise<CharacteristicValue>;
     setAutoBury(value: CharacteristicValue): Promise<void>;

@@ -162,6 +162,58 @@
               "minimum": 30,
               "description": "Override poll interval for this device (min: 30)"
             },
+            "showChildLock": {
+              "title": "Child Lock",
+              "type": "boolean"
+            },
+            "showAutoBury": {
+              "title": "Auto Bury Switch",
+              "type": "boolean"
+            },
+            "showAutoLevel": {
+              "title": "Auto Level Switch",
+              "type": "boolean"
+            },
+            "showSilentMode": {
+              "title": "Silent Mode Switch",
+              "type": "boolean"
+            },
+            "showUnstoppableCycle": {
+              "title": "Unstoppable Cycle Switch",
+              "type": "boolean"
+            },
+            "showAutoRecovery": {
+              "title": "Auto Recovery Switch",
+              "type": "boolean"
+            },
+            "showYoungCatMode": {
+              "title": "Young Cat Mode Switch",
+              "type": "boolean"
+            },
+            "showBinStateSensor": {
+              "title": "Bin State Sensor",
+              "type": "boolean"
+            },
+            "showWifiSensor": {
+              "title": "WiFi Signal Sensor",
+              "type": "boolean"
+            },
+            "showCatSensors": {
+              "title": "Cat Weight Sensors",
+              "type": "boolean"
+            },
+            "showSandLevelSensor": {
+              "title": "Sand Level Sensor",
+              "type": "boolean"
+            },
+            "showFaultSensor": {
+              "title": "Fault Sensor",
+              "type": "boolean"
+            },
+            "useImperialUnits": {
+              "title": "Use Imperial Units (lbs)",
+              "type": "boolean"
+            },
             "features": {
               "title": "Feature Overrides",
               "type": "object",
@@ -302,7 +354,36 @@
       "title": "Per-Device Overrides",
       "expandable": true,
       "items": [
-        "deviceOverrides"
+        {
+          "key": "deviceOverrides",
+          "type": "array",
+          "items": [
+            "deviceOverrides[].iotId",
+            "deviceOverrides[].name",
+            "deviceOverrides[].hidden",
+            "deviceOverrides[].pollInterval",
+            {
+              "type": "fieldset",
+              "title": "Feature Overrides",
+              "expandable": true,
+              "items": [
+                "deviceOverrides[].showChildLock",
+                "deviceOverrides[].showAutoBury",
+                "deviceOverrides[].showAutoLevel",
+                "deviceOverrides[].showSilentMode",
+                "deviceOverrides[].showUnstoppableCycle",
+                "deviceOverrides[].showAutoRecovery",
+                "deviceOverrides[].showYoungCatMode",
+                "deviceOverrides[].showBinStateSensor",
+                "deviceOverrides[].showWifiSensor",
+                "deviceOverrides[].showCatSensors",
+                "deviceOverrides[].showSandLevelSensor",
+                "deviceOverrides[].showFaultSensor",
+                "deviceOverrides[].useImperialUnits"
+              ]
+            }
+          ]
+        }
       ]
     },
     {

@@ -52,6 +52,9 @@ export class NeakasaAccessory {
     // Switch: Auto Clean
     this.addSwitch('autoClean', 'Auto Clean', 'auto-clean', this.setAutoClean, this.getAutoClean);
 
+    // Switch: Auto Level + Clean
+    this.addSwitch('autoLevelClean', 'Auto Level + Clean', 'auto-level-clean', this.setAutoLevelAndClean, this.getAutoLevelAndClean);
+
     // Button: Clean Now (stateless)
     const cleanSwitch = this.accessory.getService('clean-now') ||
       this.accessory.addService(this.platform.Service.Switch, 'Clean Now', 'clean-now');
@@ -232,6 +235,11 @@ export class NeakasaAccessory {
 
     // Core: Auto Clean
     this.updateIfChanged(this.services.get('autoClean')!, this.platform.Characteristic.On, data.cleanCfg?.active === 1);
+    this.updateIfChanged(
+      this.services.get('autoLevelClean')!,
+      this.platform.Characteristic.On,
+      data.cleanCfg?.active === 1 && data.autoLevel,
+    );
 
     // Core: Status sensor
     const statusSensor = this.services.get('status')!;
@@ -393,6 +401,29 @@ export class NeakasaAccessory {
 
   async getAutoClean(): Promise<CharacteristicValue> {
     return this.deviceData?.cleanCfg?.active === 1;
+  }
+
+  async setAutoLevelAndClean(value: CharacteristicValue): Promise<void> {
+    const newValue = value as boolean;
+    try {
+      const cleanCfg = {
+        ...(this.deviceData?.cleanCfg || {}),
+        active: newValue ? 1 : 0,
+      };
+
+      await this.platform.neakasaApi.setDeviceProperties(this.iotId, {
+        cleanCfg,
+        autoLevel: newValue ? 1 : 0,
+      });
+      this.platform.log.info(`Set Auto Level + Clean to ${newValue}`);
+    } catch (error) {
+      this.platform.log.error(`Failed to set Auto Level + Clean: ${error}`);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+  }
+
+  async getAutoLevelAndClean(): Promise<CharacteristicValue> {
+    return this.deviceData?.cleanCfg?.active === 1 && this.deviceData?.autoLevel === true;
   }
 
   async setChildLock(value: CharacteristicValue): Promise<void> {

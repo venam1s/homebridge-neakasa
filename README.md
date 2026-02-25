@@ -17,6 +17,7 @@ Ported from the [Home Assistant Neakasa Integration](https://github.com/timnikla
 | **Status** | Contact Sensor | Shows device state (Idle, Cleaning, Cat Present, etc.) |
 | **Litter Level** | Filter Maintenance | Sand level percentage with low-level alert |
 | **Auto Clean** | Switch | Toggle automatic cleaning on/off |
+| **Auto Level + Clean** | Switch | Toggle auto clean and auto level together |
 | **Clean Now** | Switch (button) | Trigger an immediate cleaning cycle |
 | **Level Now** | Switch (button) | Trigger an immediate sand leveling cycle |
 
@@ -145,11 +146,9 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "name": "Upstairs Litter Box",
       "hidden": false,
       "pollInterval": 30,
-      "features": {
-        "showFaultSensor": true,
-        "showWifiSensor": true,
-        "showCatSensors": false
-      }
+      "showFaultSensor": true,
+      "showWifiSensor": true,
+      "showCatSensors": false
     }
   ]
 }

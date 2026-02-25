@@ -18,7 +18,7 @@ export interface FeatureVisibilityConfig {
   useImperialUnits: boolean;
 }
 
-export interface DeviceOverrideConfig {
+export interface DeviceOverrideConfig extends Partial<FeatureVisibilityConfig> {
   iotId: string;
   name?: string;
   hidden?: boolean;
