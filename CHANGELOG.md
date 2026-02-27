@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0] - 2026-02-27
+
+### Added
+- New optional `Cat Visit` sensor (`showCatVisitSensor`) as a latched Contact Sensor event after completed visits.
+- New optional `Recently Used` sensor (`showRecentlyUsedSensor`) as an Occupancy Sensor for recent usage windows.
+- New configuration options: `catVisitLatchSeconds` (default `90`) and `recentlyUsedMinutes` (default `15`), with per-device overrides.
+- New configurable cat record history window: `recordDays` (default `7`, range `1-30`), with per-device override support.
+
+### Changed
+- `Last Action` now updates on new completed cat visits (`catLeft` change) and includes visit duration when available.
+- Cat records fetching now uses configurable history days and only runs when cat weight sensors are enabled.
+- Poll scheduler now queues runs to prevent overlapping polling cycles under slow network/API conditions.
+
+### Fixed
+- Poll timestamps are now recorded only after successful device updates, reducing stale-state windows during transient failures.
+- Hardened device property error handling for non-string API messages.
+
 ## [1.8.0] - 2026-02-25
 
 ### Added
