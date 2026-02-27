@@ -6,6 +6,8 @@ const FAULT_STATUSES = new Set([6, 7]);
 const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
 const ACTION_SWITCH_RESET_MS = 150;
 const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
+const DEFAULT_CAT_VISIT_LATCH_SECONDS = 90;
+const DEFAULT_RECENTLY_USED_MINUTES = 15;
 class NeakasaAccessory {
     constructor(platform, accessory, iotId, deviceName, config) {
         this.platform = platform;
@@ -138,6 +140,24 @@ class NeakasaAccessory {
         else {
             this.removeServiceIfExists('fault-alert');
         }
+        if (this.config.showCatVisitSensor === true) {
+            const catVisitSensor = this.accessory.getService('cat-visit') ||
+                this.accessory.addService(this.platform.Service.ContactSensor, 'Cat Visit', 'cat-visit');
+            this.setServiceName(catVisitSensor, 'Cat Visit');
+            this.services.set('catVisit', catVisitSensor);
+        }
+        else {
+            this.removeServiceIfExists('cat-visit');
+        }
+        if (this.config.showRecentlyUsedSensor === true) {
+            const recentlyUsedSensor = this.accessory.getService('recently-used') ||
+                this.accessory.addService(this.platform.Service.OccupancySensor, 'Recently Used', 'recently-used');
+            this.setServiceName(recentlyUsedSensor, 'Recently Used');
+            this.services.set('recentlyUsed', recentlyUsedSensor);
+        }
+        else {
+            this.removeServiceIfExists('recently-used');
+        }
     }
     addSwitch(key, name, subType, setter, getter) {
         const service = this.accessory.getService(subType) ||
@@ -200,6 +220,26 @@ class NeakasaAccessory {
     getLastUseTimestampMs(lastUse) {
         return lastUse < 1000000000000 ? lastUse * 1000 : lastUse;
     }
+    isLastUseRecent(data, windowSeconds) {
+        if (windowSeconds <= 0 || !data.lastUse) {
+            return false;
+        }
+        const nowMs = Date.now();
+        const lastUseMs = this.getLastUseTimestampMs(data.lastUse);
+        return nowMs >= lastUseMs && nowMs - lastUseMs <= windowSeconds * 1000;
+    }
+    formatStayTime(stayTimeSeconds) {
+        if (!Number.isFinite(stayTimeSeconds) || stayTimeSeconds <= 0) {
+            return 'unknown';
+        }
+        const totalSeconds = Math.round(stayTimeSeconds);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        if (minutes <= 0) {
+            return `${seconds}s`;
+        }
+        return `${minutes}m ${seconds}s`;
+    }
     isCatPresentDetected(data) {
         if (data.bucketStatus === 4) {
             return true;
@@ -208,11 +248,10 @@ class NeakasaAccessory {
         if (latchSeconds <= 0 || !data.lastUse) {
             return false;
         }
-        const nowMs = Date.now();
-        const lastUseMs = this.getLastUseTimestampMs(data.lastUse);
-        return nowMs >= lastUseMs && nowMs - lastUseMs <= latchSeconds * 1000;
+        return this.isLastUseRecent(data, latchSeconds);
     }
     async updateData(data) {
+        const previousLastUse = this.previousData?.lastUse || 0;
         this.deviceData = data;
         const filterService = this.services.get('filter');
         const changeIndication = data.sandLevelState === types_1.SandLevel.INSUFFICIENT ?
@@ -241,6 +280,22 @@ class NeakasaAccessory {
         this.updateIfChanged(catPresentSensor, this.platform.Characteristic.OccupancyDetected, catPresentDetected ?
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
+        const catVisitSensor = this.services.get('catVisit');
+        if (catVisitSensor) {
+            const latchSeconds = this.config.catVisitLatchSeconds ?? DEFAULT_CAT_VISIT_LATCH_SECONDS;
+            const catVisitActive = this.isLastUseRecent(data, latchSeconds);
+            this.updateIfChanged(catVisitSensor, this.platform.Characteristic.ContactSensorState, catVisitActive ?
+                this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+                this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED);
+        }
+        const recentlyUsedSensor = this.services.get('recentlyUsed');
+        if (recentlyUsedSensor) {
+            const windowSeconds = (this.config.recentlyUsedMinutes ?? DEFAULT_RECENTLY_USED_MINUTES) * 60;
+            const recentlyUsed = this.isLastUseRecent(data, windowSeconds);
+            this.updateIfChanged(recentlyUsedSensor, this.platform.Characteristic.OccupancyDetected, recentlyUsed ?
+                this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
+                this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
+        }
         const childLockService = this.services.get('childLock');
         if (childLockService) {
             const lockState = data.childLockOnOff ?
@@ -305,6 +360,10 @@ class NeakasaAccessory {
         }
         if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
             this.updateCatSensors(data);
+        }
+        if (this.previousData && data.lastUse > 0 && data.lastUse !== previousLastUse) {
+            const stayText = this.formatStayTime(data.stayTime);
+            this.setLastActionResult(`Last cat visit: ${stayText}`, true);
         }
         this.previousData = data;
         this.platform.log.debug(`Updated ${this.deviceName}: Status=${types_1.BucketStatus[data.bucketStatus] || data.bucketStatus}, ` +

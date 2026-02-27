@@ -15,6 +15,8 @@ export interface FeatureVisibilityConfig {
   showBinStateSensor: boolean;
   showWifiSensor: boolean;
   showCatSensors: boolean;
+  showCatVisitSensor: boolean;
+  showRecentlyUsedSensor: boolean;
   showSandLevelSensor: boolean;
   showFaultSensor: boolean;
   useImperialUnits: boolean;
@@ -25,7 +27,10 @@ export interface DeviceOverrideConfig extends Partial<FeatureVisibilityConfig> {
   name?: string;
   hidden?: boolean;
   pollInterval?: number;
+  recordDays?: number;
   catPresentLatchSeconds?: number;
+  catVisitLatchSeconds?: number;
+  recentlyUsedMinutes?: number;
   features?: Partial<FeatureVisibilityConfig>;
 }
 
@@ -33,7 +38,10 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   username: string;
   password: string;
   pollInterval?: number;
+  recordDays?: number;
   catPresentLatchSeconds?: number;
+  catVisitLatchSeconds?: number;
+  recentlyUsedMinutes?: number;
   debug?: boolean;
   deviceName?: string;
   startupBehavior?: StartupBehavior;
@@ -53,6 +61,8 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   showBinStateSensor?: boolean;
   showWifiSensor?: boolean;
   showCatSensors?: boolean;
+  showCatVisitSensor?: boolean;
+  showRecentlyUsedSensor?: boolean;
   showSandLevelSensor?: boolean;
   // Unit preference
   useImperialUnits?: boolean;

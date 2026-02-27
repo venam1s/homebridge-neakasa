@@ -27,12 +27,34 @@
         "minimum": 30,
         "description": "How often to check for updates from the Neakasa cloud"
       },
+      "recordDays": {
+        "title": "Record History Days",
+        "type": "integer",
+        "default": 7,
+        "minimum": 1,
+        "maximum": 30,
+        "description": "How many days of cat records to fetch for Cat Weight sensors (1-30)."
+      },
       "catPresentLatchSeconds": {
         "title": "Cat Present Latch (seconds)",
         "type": "integer",
         "default": 240,
         "minimum": 0,
         "description": "Keep Cat Present active for this many seconds after catLeft is reported. Set 0 to disable latch and use only live status."
+      },
+      "catVisitLatchSeconds": {
+        "title": "Cat Visit Latch (seconds)",
+        "type": "integer",
+        "default": 90,
+        "minimum": 0,
+        "description": "How long the Cat Visit event sensor stays active after a detected visit."
+      },
+      "recentlyUsedMinutes": {
+        "title": "Recently Used Window (minutes)",
+        "type": "integer",
+        "default": 15,
+        "minimum": 0,
+        "description": "How long the Recently Used sensor remains active after the last visit."
       },
       "startupBehavior": {
         "title": "Startup Behavior",
@@ -131,6 +153,18 @@
         "default": false,
         "description": "Tracks each cat's last recorded weight. Shows as a Humidity Sensor per cat in HomeKit."
       },
+      "showCatVisitSensor": {
+        "title": "Cat Visit Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Adds a latched Contact Sensor that indicates a recent completed cat visit."
+      },
+      "showRecentlyUsedSensor": {
+        "title": "Recently Used Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Adds an Occupancy Sensor that indicates the box was used recently."
+      },
       "showSandLevelSensor": {
         "title": "Sand Level State Sensor",
         "type": "boolean",
@@ -181,11 +215,30 @@
               "minimum": 30,
               "description": "Override poll interval for this device (min: 30)"
             },
+            "recordDays": {
+              "title": "Record History Days",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30,
+              "description": "Override cat record history days for this device (1-30)."
+            },
             "catPresentLatchSeconds": {
               "title": "Cat Present Latch (seconds)",
               "type": "integer",
               "minimum": 0,
               "description": "Override Cat Present latch duration for this device. Set 0 to disable."
+            },
+            "catVisitLatchSeconds": {
+              "title": "Cat Visit Latch (seconds)",
+              "type": "integer",
+              "minimum": 0,
+              "description": "Override Cat Visit latch duration for this device."
+            },
+            "recentlyUsedMinutes": {
+              "title": "Recently Used Window (minutes)",
+              "type": "integer",
+              "minimum": 0,
+              "description": "Override Recently Used window duration for this device."
             },
             "showChildLock": {
               "title": "Child Lock",
@@ -233,6 +286,14 @@
             },
             "showCatSensors": {
               "title": "Cat Weight Sensors",
+              "type": "boolean"
+            },
+            "showCatVisitSensor": {
+              "title": "Cat Visit Sensor",
+              "type": "boolean"
+            },
+            "showRecentlyUsedSensor": {
+              "title": "Recently Used Sensor",
               "type": "boolean"
             },
             "showSandLevelSensor": {
@@ -301,6 +362,14 @@
                   "title": "Cat Weight Sensors",
                   "type": "boolean"
                 },
+                "showCatVisitSensor": {
+                  "title": "Cat Visit Sensor",
+                  "type": "boolean"
+                },
+                "showRecentlyUsedSensor": {
+                  "title": "Recently Used Sensor",
+                  "type": "boolean"
+                },
                 "showSandLevelSensor": {
                   "title": "Sand Level Sensor",
                   "type": "boolean"
@@ -352,7 +421,19 @@
           "flex": "1 1 50%"
         },
         {
+          "key": "recordDays",
+          "flex": "1 1 50%"
+        },
+        {
           "key": "catPresentLatchSeconds",
+          "flex": "1 1 50%"
+        },
+        {
+          "key": "catVisitLatchSeconds",
+          "flex": "1 1 50%"
+        },
+        {
+          "key": "recentlyUsedMinutes",
           "flex": "1 1 50%"
         },
         {
@@ -391,6 +472,8 @@
         "showBinStateSensor",
         "showWifiSensor",
         "showCatSensors",
+        "showCatVisitSensor",
+        "showRecentlyUsedSensor",
         "showSandLevelSensor",
         "showFaultSensor"
       ]
@@ -408,7 +491,10 @@
             "deviceOverrides[].name",
             "deviceOverrides[].hidden",
             "deviceOverrides[].pollInterval",
+            "deviceOverrides[].recordDays",
             "deviceOverrides[].catPresentLatchSeconds",
+            "deviceOverrides[].catVisitLatchSeconds",
+            "deviceOverrides[].recentlyUsedMinutes",
             {
               "type": "fieldset",
               "title": "Feature Overrides",
@@ -425,6 +511,8 @@
                 "deviceOverrides[].showBinStateSensor",
                 "deviceOverrides[].showWifiSensor",
                 "deviceOverrides[].showCatSensors",
+                "deviceOverrides[].showCatVisitSensor",
+                "deviceOverrides[].showRecentlyUsedSensor",
                 "deviceOverrides[].showSandLevelSensor",
                 "deviceOverrides[].showFaultSensor",
                 "deviceOverrides[].useImperialUnits"

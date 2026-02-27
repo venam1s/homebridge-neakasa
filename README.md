@@ -44,6 +44,8 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 | **Bin State** | Leak Sensor | Detailed bin status (Normal, Full, Missing) |
 | **WiFi Signal** | Humidity Sensor | Device WiFi signal strength as percentage |
 | **Cat Weight** | Humidity Sensor | Per-cat weight tracking (one sensor per cat) |
+| **Cat Visit** | Contact Sensor | Latched visit event that turns on briefly after a completed cat visit |
+| **Recently Used** | Occupancy Sensor | Indicates the litter box was used within a recent time window |
 | **Sand Level State** | Contact Sensor | Detailed level (Insufficient, Moderate, Sufficient, Overfilled) |
 | **Fault Alert** | Motion Sensor | Alerts when the device is stuck or faulted (Panels Missing, Interrupted) |
 
@@ -54,6 +56,8 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 > **Note:** `Run Clean Cycle` and `Run Leveling` are intentionally momentary action switches. They reset back to off right after the command is sent and are blocked when `Cat Present` is active.
 
 > **Note:** `Cat Present` uses live status when available, plus a configurable `catPresentLatchSeconds` window (default `240`) after `catLeft` is reported by Neakasa. This helps catch short visits between polls.
+
+> **Note:** `Last Action` also updates when a new cat visit is detected (`catLeft` changed), including visit duration when available.
 
 #### Cat Weight Sensors
 
@@ -102,7 +106,10 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "username": "your@email.com",
       "password": "your_password",
       "pollInterval": 60,
+      "recordDays": 7,
       "catPresentLatchSeconds": 240,
+      "catVisitLatchSeconds": 90,
+      "recentlyUsedMinutes": 15,
       "startupBehavior": "immediate",
       "startupDelaySeconds": 0,
       "deviceOverrides": [],
@@ -122,7 +129,10 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `password` | Yes | — | Your Neakasa account password |
 | `deviceName` | No | `"Neakasa M1"` | Display name in HomeKit |
 | `pollInterval` | No | `60` | Update interval in seconds (min: 30) |
+| `recordDays` | No | `7` | Days of cat history to fetch for Cat Weight sensors (1-30) |
 | `catPresentLatchSeconds` | No | `240` | Keep `Cat Present` active for N seconds after `catLeft`; set `0` to disable latch |
+| `catVisitLatchSeconds` | No | `90` | How long `Cat Visit` stays active after a detected visit; set `0` to disable latch |
+| `recentlyUsedMinutes` | No | `15` | Time window for the `Recently Used` sensor; set `0` to disable |
 | `startupBehavior` | No | `"immediate"` | Startup refresh mode: `immediate` or `skipInitialUpdate` |
 | `startupDelaySeconds` | No | `0` | Delay initial refresh at startup (seconds) |
 | `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, hidden status, polling, and feature flags |
@@ -139,6 +149,8 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showBinStateSensor` | No | `false` | Show Bin State sensor |
 | `showWifiSensor` | No | `false` | Show WiFi Signal sensor |
 | `showCatSensors` | No | `false` | Show per-cat weight sensors |
+| `showCatVisitSensor` | No | `false` | Show Cat Visit event sensor (Contact Sensor) |
+| `showRecentlyUsedSensor` | No | `false` | Show Recently Used sensor (Occupancy Sensor) |
 | `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
 | `showFaultSensor` | No | `false` | Show Fault Alert sensor (Motion Sensor) |
 | `useImperialUnits` | No | `false` | Display cat weight in lbs instead of kg |
@@ -152,7 +164,10 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
   "username": "your@email.com",
   "password": "your_password",
   "pollInterval": 60,
+  "recordDays": 7,
   "catPresentLatchSeconds": 240,
+  "catVisitLatchSeconds": 90,
+  "recentlyUsedMinutes": 15,
   "startupBehavior": "immediate",
   "startupDelaySeconds": 5,
   "deviceOverrides": [
@@ -161,8 +176,12 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "name": "Upstairs Litter Box",
       "hidden": false,
       "pollInterval": 30,
+      "recordDays": 3,
       "catPresentLatchSeconds": 240,
+      "catVisitLatchSeconds": 120,
+      "recentlyUsedMinutes": 20,
       "showFaultSensor": true,
+      "showCatVisitSensor": true,
       "showWifiSensor": true,
       "showCatSensors": false
     }

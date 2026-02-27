@@ -27,6 +27,8 @@ export declare class NeakasaPlatform implements DynamicPlatformPlugin {
     private sanitizeConfig;
     private validatePollInterval;
     private validateCatPresentLatchSeconds;
+    private validateNonNegativeInt;
+    private validateRecordDays;
     private validateStartupBehavior;
     private validateStartupDelay;
     private validateDeviceOverrides;
@@ -34,6 +36,7 @@ export declare class NeakasaPlatform implements DynamicPlatformPlugin {
     private getSchedulerTickSeconds;
     private buildAccessoryConfig;
     private getFeatureConfig;
+    private getRecordDays;
     private removeAccessoryByIotId;
     private logConfigStartupChecks;
     private logDetectedDeviceSummary;

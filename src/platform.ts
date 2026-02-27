@@ -13,7 +13,12 @@ import {
 
 const MIN_POLL_INTERVAL_SECONDS = 30;
 const DEFAULT_POLL_INTERVAL_SECONDS = 60;
+const MIN_RECORD_DAYS = 1;
+const MAX_RECORD_DAYS = 30;
+const DEFAULT_RECORD_DAYS = 7;
 const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
+const DEFAULT_CAT_VISIT_LATCH_SECONDS = 90;
+const DEFAULT_RECENTLY_USED_MINUTES = 15;
 const DEFAULT_STARTUP_BEHAVIOR: StartupBehavior = 'immediate';
 
 const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
@@ -29,6 +34,8 @@ const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
   'showBinStateSensor',
   'showWifiSensor',
   'showCatSensors',
+  'showCatVisitSensor',
+  'showRecentlyUsedSensor',
   'showSandLevelSensor',
   'showFaultSensor',
   'useImperialUnits',
@@ -47,6 +54,8 @@ const FEATURE_LABELS: Record<keyof FeatureVisibilityConfig, string> = {
   showBinStateSensor: 'Bin State Sensor',
   showWifiSensor: 'WiFi Signal Sensor',
   showCatSensors: 'Cat Weight Sensors',
+  showCatVisitSensor: 'Cat Visit Sensor',
+  showRecentlyUsedSensor: 'Recently Used Sensor',
   showSandLevelSensor: 'Sand Level Sensor',
   showFaultSensor: 'Fault Sensor',
   useImperialUnits: 'Imperial Units',
@@ -291,7 +300,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
     if (shouldFetchRecords && deviceContext) {
       try {
-        const records = await this.neakasaApi.getRecords(deviceContext.deviceName);
+        const records = await this.neakasaApi.getRecords(deviceContext.deviceName, this.getRecordDays(iotId));
         catList = records.cat_list || [];
         recordList = records.record_list || [];
       } catch (recordError) {
@@ -324,22 +333,37 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   }
 
   private sanitizeConfig(rawConfig: NeakasaPlatformConfig): NeakasaPlatformConfig {
+    const validatedRecordDays =
+      this.validateRecordDays(rawConfig.recordDays, 'recordDays') ??
+      DEFAULT_RECORD_DAYS;
     const validatedCatPresentLatchSeconds =
       this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
       DEFAULT_CAT_PRESENT_LATCH_SECONDS;
+    const validatedCatVisitLatchSeconds =
+      this.validateNonNegativeInt(rawConfig.catVisitLatchSeconds, 'catVisitLatchSeconds') ??
+      DEFAULT_CAT_VISIT_LATCH_SECONDS;
+    const validatedRecentlyUsedMinutes =
+      this.validateNonNegativeInt(rawConfig.recentlyUsedMinutes, 'recentlyUsedMinutes') ??
+      DEFAULT_RECENTLY_USED_MINUTES;
 
     const config: NeakasaPlatformConfig = {
       ...rawConfig,
       username: typeof rawConfig.username === 'string' ? rawConfig.username.trim() : rawConfig.username,
       password: typeof rawConfig.password === 'string' ? rawConfig.password : rawConfig.password,
       pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS,
+      recordDays: validatedRecordDays,
       catPresentLatchSeconds: validatedCatPresentLatchSeconds,
+      catVisitLatchSeconds: validatedCatVisitLatchSeconds,
+      recentlyUsedMinutes: validatedRecentlyUsedMinutes,
       startupBehavior: this.validateStartupBehavior(rawConfig.startupBehavior),
       startupDelaySeconds: this.validateStartupDelay(rawConfig.startupDelaySeconds),
       deviceOverrides: this.validateDeviceOverrides(
         rawConfig.deviceOverrides,
         rawConfig.pollInterval,
+        validatedRecordDays,
         validatedCatPresentLatchSeconds,
+        validatedCatVisitLatchSeconds,
+        validatedRecentlyUsedMinutes,
       ),
     };
 
@@ -360,12 +384,29 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   }
 
   private validateCatPresentLatchSeconds(value: number | undefined, context: string): number | undefined {
+    return this.validateNonNegativeInt(value, context);
+  }
+
+  private validateNonNegativeInt(value: number | undefined, context: string): number | undefined {
     if (value === undefined || value === null) {
       return undefined;
     }
 
     if (!Number.isInteger(value) || value < 0) {
       this.log.warn(`${context} must be an integer >= 0; using default`);
+      return undefined;
+    }
+
+    return value;
+  }
+
+  private validateRecordDays(value: number | undefined, context: string): number | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (!Number.isInteger(value) || value < MIN_RECORD_DAYS || value > MAX_RECORD_DAYS) {
+      this.log.warn(`${context} must be an integer between ${MIN_RECORD_DAYS} and ${MAX_RECORD_DAYS}; using default`);
       return undefined;
     }
 
@@ -401,7 +442,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   private validateDeviceOverrides(
     overrides: DeviceOverrideConfig[] | undefined,
     globalPollInterval: number | undefined,
+    globalRecordDays: number,
     globalCatPresentLatchSeconds: number,
+    globalCatVisitLatchSeconds: number,
+    globalRecentlyUsedMinutes: number,
   ): DeviceOverrideConfig[] {
     if (!Array.isArray(overrides)) {
       return [];
@@ -431,12 +475,24 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
       const pollInterval = this.validatePollInterval(override.pollInterval, `deviceOverrides[${i}].pollInterval`) ||
         (this.validatePollInterval(globalPollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS);
+      const recordDays = this.validateRecordDays(
+        override.recordDays,
+        `deviceOverrides[${i}].recordDays`,
+      ) ?? globalRecordDays;
       const catPresentLatchSeconds =
         this.validateCatPresentLatchSeconds(
           override.catPresentLatchSeconds,
           `deviceOverrides[${i}].catPresentLatchSeconds`,
         ) ??
         globalCatPresentLatchSeconds;
+      const catVisitLatchSeconds = this.validateNonNegativeInt(
+        override.catVisitLatchSeconds,
+        `deviceOverrides[${i}].catVisitLatchSeconds`,
+      ) ?? globalCatVisitLatchSeconds;
+      const recentlyUsedMinutes = this.validateNonNegativeInt(
+        override.recentlyUsedMinutes,
+        `deviceOverrides[${i}].recentlyUsedMinutes`,
+      ) ?? globalRecentlyUsedMinutes;
 
       const features: Partial<FeatureVisibilityConfig> = {};
       for (const key of FEATURE_KEYS) {
@@ -459,7 +515,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         name: typeof override.name === 'string' ? override.name.trim() : undefined,
         hidden: override.hidden === true,
         pollInterval,
+        recordDays,
         catPresentLatchSeconds,
+        catVisitLatchSeconds,
+        recentlyUsedMinutes,
         features,
       });
     }
@@ -487,8 +546,17 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     return {
       ...this.config,
       ...featureConfig,
+      ...(override?.recordDays !== undefined
+        ? { recordDays: override.recordDays }
+        : {}),
       ...(override?.catPresentLatchSeconds !== undefined
         ? { catPresentLatchSeconds: override.catPresentLatchSeconds }
+        : {}),
+      ...(override?.catVisitLatchSeconds !== undefined
+        ? { catVisitLatchSeconds: override.catVisitLatchSeconds }
+        : {}),
+      ...(override?.recentlyUsedMinutes !== undefined
+        ? { recentlyUsedMinutes: override.recentlyUsedMinutes }
         : {}),
     };
   }
@@ -507,6 +575,8 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       showBinStateSensor: this.config.showBinStateSensor === true,
       showWifiSensor: this.config.showWifiSensor === true,
       showCatSensors: this.config.showCatSensors === true,
+      showCatVisitSensor: this.config.showCatVisitSensor === true,
+      showRecentlyUsedSensor: this.config.showRecentlyUsedSensor === true,
       showSandLevelSensor: this.config.showSandLevelSensor === true,
       showFaultSensor: this.config.showFaultSensor === true,
       useImperialUnits: this.config.useImperialUnits === true,
@@ -525,6 +595,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     }
 
     return base;
+  }
+
+  private getRecordDays(iotId: string): number {
+    return this.getDeviceOverride(iotId)?.recordDays ?? this.config.recordDays ?? DEFAULT_RECORD_DAYS;
   }
 
   private removeAccessoryByIotId(iotId: string): void {
@@ -549,7 +623,9 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
   private logConfigStartupChecks(): void {
     this.log.info(
-      `Startup checks: pollInterval=${this.config.pollInterval}s, catPresentLatchSeconds=${this.config.catPresentLatchSeconds}s, ` +
+      `Startup checks: pollInterval=${this.config.pollInterval}s, recordDays=${this.config.recordDays}, ` +
+      `catPresentLatchSeconds=${this.config.catPresentLatchSeconds}s, catVisitLatchSeconds=${this.config.catVisitLatchSeconds}s, ` +
+      `recentlyUsedMinutes=${this.config.recentlyUsedMinutes}, ` +
       `startupBehavior=${this.config.startupBehavior}, startupDelaySeconds=${this.config.startupDelaySeconds}`,
     );
 
@@ -573,15 +649,23 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       const hidden = override?.hidden === true;
       const displayName = override?.name || device.deviceName || this.config.deviceName || 'Neakasa M1';
       const pollInterval = override?.pollInterval || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
+      const recordDays = override?.recordDays ?? this.config.recordDays ?? DEFAULT_RECORD_DAYS;
       const catPresentLatchSeconds = override?.catPresentLatchSeconds ??
         this.config.catPresentLatchSeconds ??
         DEFAULT_CAT_PRESENT_LATCH_SECONDS;
+      const catVisitLatchSeconds = override?.catVisitLatchSeconds ??
+        this.config.catVisitLatchSeconds ??
+        DEFAULT_CAT_VISIT_LATCH_SECONDS;
+      const recentlyUsedMinutes = override?.recentlyUsedMinutes ??
+        this.config.recentlyUsedMinutes ??
+        DEFAULT_RECENTLY_USED_MINUTES;
       const enabledFeatures = FEATURE_KEYS
         .filter(key => this.getFeatureConfig(device.iotId)[key])
         .map(key => FEATURE_LABELS[key]);
 
       this.log.info(
-        `- ${displayName} [${device.iotId}] hidden=${hidden} poll=${pollInterval}s catPresentLatch=${catPresentLatchSeconds}s ` +
+        `- ${displayName} [${device.iotId}] hidden=${hidden} poll=${pollInterval}s recordDays=${recordDays} ` +
+        `catPresentLatch=${catPresentLatchSeconds}s catVisitLatch=${catVisitLatchSeconds}s recentlyUsed=${recentlyUsedMinutes}m ` +
         `features=${enabledFeatures.length > 0 ? enabledFeatures.join(', ') : 'core-only'}`,
       );
     }

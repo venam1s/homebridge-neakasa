@@ -432,10 +432,10 @@ export class NeakasaAPI {
     await this.setDeviceProperties(iotId, { binFullWaitReset: 0 });
   }
 
-  async getRecords(deviceName: string): Promise<RecordsResponse> {
+  async getRecords(deviceName: string, recordDays: number = 7): Promise<RecordsResponse> {
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = this.getSignature(timestamp.toString());
-    const startTime = timestamp - (7 * 24 * 60 * 60); // 7 days ago
+    const startTime = timestamp - (recordDays * 24 * 60 * 60);
 
     try {
       const response = await this.axiosInstance.get(`${this.baseUrl}/catbox/record`, {

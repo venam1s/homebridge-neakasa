@@ -38,6 +38,6 @@ export declare class NeakasaAPI {
     cleanNow(iotId: string): Promise<void>;
     sandLeveling(iotId: string): Promise<void>;
     emptyBin(iotId: string): Promise<void>;
-    getRecords(deviceName: string): Promise<RecordsResponse>;
+    getRecords(deviceName: string, recordDays?: number): Promise<RecordsResponse>;
 }
 //# sourceMappingURL=api.d.ts.map
