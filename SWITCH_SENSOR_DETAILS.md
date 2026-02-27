@@ -19,6 +19,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 ## Core Switches (always shown)
 
 ### Auto Clean
+- Description: Turns scheduled automatic cleaning on or off.
+
 - HomeKit type: `Switch`
 - Visibility option: always shown
 - Behavior:
@@ -30,6 +32,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn `Auto Clean` off (quiet overnight), then schedule another automation to turn it on in the morning
 
 ### Run Clean Cycle
+- Description: Starts an immediate one-time cleaning cycle, then resets to off.
+
 - HomeKit type: `Switch` (momentary action)
 - Visibility option: always shown
 - Behavior:
@@ -41,6 +45,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn on `Run Clean Cycle`
 
 ### Run Leveling
+- Description: Starts an immediate one-time sand leveling action, then resets to off.
+
 - HomeKit type: `Switch` (momentary action)
 - Visibility option: always shown
 - Behavior:
@@ -53,6 +59,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 ## Optional Switches (all default `false`)
 
 ### Child Lock
+- Description: Locks manual controls on the device to prevent accidental interaction.
+
 - HomeKit type: `Lock Mechanism`
 - Show option: `showChildLock`
 - Behavior:
@@ -63,6 +71,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Set `Child Lock` to `Secured`
 
 ### Sync Auto Level With Auto Clean
+- Description: Toggles Auto Clean and Auto Level together with a single switch.
+
 - HomeKit type: `Switch`
 - Show option: `showAutoLevelClean`
 - Behavior:
@@ -73,6 +83,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn this switch off to disable both automations overnight
 
 ### Empty Bin
+- Description: Marks the bin as emptied using a required double-tap confirmation.
+
 - HomeKit type: `Switch` (two-step action)
 - Show option: `showEmptyBin`
 - Behavior:
@@ -83,6 +95,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send notification "Empty Neakasa bin and double-tap Empty Bin switch"
 
 ### Auto Bury
+- Description: Automatically covers waste after cat use.
+
 - HomeKit type: `Switch`
 - Show option: `showAutoBury`
 - Behavior:
@@ -93,6 +107,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn `Auto Bury` on for cleaner overnight operation
 
 ### Auto Level
+- Description: Automatically levels litter after clean cycles.
+
 - HomeKit type: `Switch`
 - Show option: `showAutoLevel`
 - Behavior:
@@ -103,6 +119,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn `Auto Level` on
 
 ### Silent Mode
+- Description: Reduces operating noise during clean and level cycles.
+
 - HomeKit type: `Switch`
 - Show option: `showSilentMode`
 - Behavior:
@@ -113,6 +131,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn `Silent Mode` on
 
 ### Unstoppable Cycle
+- Description: Makes cycles less likely to pause when interrupted.
+
 - HomeKit type: `Switch`
 - Show option: `showUnstoppableCycle`
 - Behavior:
@@ -123,6 +143,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn `Unstoppable Cycle` on while away
 
 ### Auto Recovery
+- Description: Automatically resumes after an interruption when possible.
+
 - HomeKit type: `Switch`
 - Show option: `showAutoRecovery`
 - Behavior:
@@ -133,6 +155,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn `Auto Recovery` on to keep future cycles resilient
 
 ### Young Cat Mode
+- Description: Uses timing behavior tuned for kittens and younger cats.
+
 - HomeKit type: `Switch`
 - Show option: `showYoungCatMode`
 - Behavior:
@@ -147,6 +171,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 ## Core Sensors (always shown)
 
 ### Cat Present
+- Description: Shows whether a cat is currently detected, including optional latch time.
+
 - HomeKit type: `Occupancy Sensor`
 - Visibility option: always shown
 - Related settings: `catPresentLatchSeconds`
@@ -158,6 +184,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Turn on laundry room light for 5 minutes
 
 ### Waste Bin Full
+- Description: Shows when the waste bin needs to be emptied or reset.
+
 - HomeKit type: `Occupancy Sensor`
 - Visibility option: always shown
 - State meaning:
@@ -168,6 +196,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send critical notification
 
 ### Status
+- Description: Maps current device state (idle/active/fault) into a HomeKit sensor.
+
 - HomeKit type: `Contact Sensor` (status mapper)
 - Visibility option: always shown
 - State meaning:
@@ -179,6 +209,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send "Cycle finished" notification
 
 ### Last Action
+- Description: Shows the latest action result with timestamp.
+
 - HomeKit type: `Contact Sensor` (result/event mapper)
 - Visibility option: always shown
 - State meaning:
@@ -190,6 +222,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send "Neakasa action failed/blocked" alert
 
 ### Litter Level
+- Description: Reports litter percentage and low-litter maintenance state.
+
 - HomeKit type: `Filter Maintenance`
 - Visibility option: always shown
 - State meaning:
@@ -202,6 +236,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 ## Optional Sensors (all default `false`)
 
 ### Bin State
+- Description: Shows detailed bin condition: normal, full, or missing.
+
 - HomeKit type: `Leak Sensor`
 - Show option: `showBinStateSensor`
 - State meaning:
@@ -213,6 +249,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send "Bin full or removed" alert
 
 ### WiFi Signal
+- Description: Displays WiFi signal strength as a percentage-style value.
+
 - HomeKit type: `Humidity Sensor` (workaround type)
 - Show option: `showWifiSensor`
 - State meaning:
@@ -222,6 +260,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send "Weak WiFi at litter box" notification
 
 ### Cat Weight (per cat)
+- Description: Shows each cat's latest recorded weight as a sensor value.
+
 - HomeKit type: `Humidity Sensor` (workaround type)
 - Show option: `showCatSensors`
 - Related settings: `recordDays`, `useImperialUnits`
@@ -235,6 +275,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send "Weight trend check" reminder
 
 ### Cat Visit
+- Description: Triggers briefly after a completed cat visit event.
+
 - HomeKit type: `Contact Sensor`
 - Show option: `showCatVisitSensor`
 - Related settings: `catVisitLatchSeconds`
@@ -246,6 +288,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Log a visit event to HomeKit/Home app notification
 
 ### Recently Used
+- Description: Indicates the litter box was used within a recent time window.
+
 - HomeKit type: `Occupancy Sensor`
 - Show option: `showRecentlyUsedSensor`
 - Related settings: `recentlyUsedMinutes`
@@ -257,6 +301,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Start bathroom fan for 10 minutes
 
 ### Sand Level State
+- Description: Shows detailed sand status, including insufficient-level alerts.
+
 - HomeKit type: `Contact Sensor`
 - Show option: `showSandLevelSensor`
 - State meaning:
@@ -268,6 +314,8 @@ This page explains what each HomeKit switch/sensor does in `homebridge-neakasa`,
 - Action: Send "Litter is insufficient" alert
 
 ### Fault Alert
+- Description: Indicates active fault states such as panels missing or interrupted.
+
 - HomeKit type: `Motion Sensor`
 - Show option: `showFaultSensor`
 - State meaning:
