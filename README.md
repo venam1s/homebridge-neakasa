@@ -7,6 +7,7 @@ Homebridge plugin for the **Neakasa M1 Cat Litter Box**. Monitor and control you
 Ported from the [Home Assistant Neakasa Integration](https://github.com/timniklas/hass-neakasa) by [@timniklas](https://github.com/timniklas).
 
 For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md).
+For detailed behavior of every switch and sensor (including automation examples), see [Switch and Sensor Details](./SWITCH_SENSOR_DETAILS.md).
 
 ## Features
 
