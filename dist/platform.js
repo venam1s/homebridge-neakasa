@@ -6,6 +6,7 @@ const accessory_1 = require("./accessory");
 const api_1 = require("./api");
 const MIN_POLL_INTERVAL_SECONDS = 30;
 const DEFAULT_POLL_INTERVAL_SECONDS = 60;
+const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 const DEFAULT_STARTUP_BEHAVIOR = 'immediate';
 const FEATURE_KEYS = [
     'showAutoLevelClean',
@@ -51,6 +52,9 @@ class NeakasaPlatform {
         this.deviceAccessories = new Map();
         this.devicePollIntervals = new Map();
         this.lastPolledAt = new Map();
+        this.pollRunInProgress = false;
+        this.pollRunQueued = false;
+        this.queuedPollForceAll = false;
         this.config = this.sanitizeConfig(config);
         this.neakasaApi = new api_1.NeakasaAPI(this.log);
         if (!this.config.username || !this.config.password) {
@@ -156,16 +160,38 @@ class NeakasaPlatform {
             if (delaySeconds > 0) {
                 this.log.info(`Startup behavior: initial refresh delayed by ${delaySeconds} seconds`);
                 this.startupTimeout = setTimeout(() => {
-                    this.updateAllDueDevices(true);
+                    this.enqueuePollRun(true);
                 }, delaySeconds * 1000);
             }
             else {
-                this.updateAllDueDevices(true);
+                this.enqueuePollRun(true);
             }
         }
         this.pollInterval = setInterval(() => {
-            this.updateAllDueDevices(false);
+            this.enqueuePollRun(false);
         }, tickerSeconds * 1000);
+    }
+    enqueuePollRun(forceAll) {
+        this.pollRunQueued = true;
+        this.queuedPollForceAll = this.queuedPollForceAll || forceAll;
+        if (this.pollRunInProgress) {
+            return;
+        }
+        this.pollRunInProgress = true;
+        void this.flushQueuedPollRuns();
+    }
+    async flushQueuedPollRuns() {
+        try {
+            while (this.pollRunQueued) {
+                const forceAll = this.queuedPollForceAll;
+                this.pollRunQueued = false;
+                this.queuedPollForceAll = false;
+                await this.updateAllDueDevices(forceAll);
+            }
+        }
+        finally {
+            this.pollRunInProgress = false;
+        }
     }
     async updateAllDueDevices(forceAll) {
         const now = Date.now();
@@ -175,9 +201,10 @@ class NeakasaPlatform {
             if (!forceAll && now - lastPolledAt < intervalSeconds * 1000) {
                 continue;
             }
-            this.lastPolledAt.set(iotId, now);
+            let updatedSuccessfully = false;
             try {
                 await this.updateDevice(iotId, accessory);
+                updatedSuccessfully = true;
             }
             catch (error) {
                 this.log.error(`Failed to update device ${iotId}:`, error);
@@ -187,20 +214,28 @@ class NeakasaPlatform {
                         await this.neakasaApi.connect(this.config.username, this.config.password);
                         this.log.info('Reconnected successfully, retrying device update...');
                         await this.updateDevice(iotId, accessory);
+                        updatedSuccessfully = true;
                     }
                     catch (reconnectError) {
                         this.log.error('Failed to reconnect:', reconnectError);
                     }
                 }
             }
+            finally {
+                if (updatedSuccessfully) {
+                    this.lastPolledAt.set(iotId, Date.now());
+                }
+            }
         }
     }
     async updateDevice(iotId, accessory) {
         const properties = await this.neakasaApi.getDeviceProperties(iotId);
+        const featureConfig = this.getFeatureConfig(iotId);
+        const shouldFetchRecords = featureConfig.showCatSensors === true;
         const deviceContext = this.accessories.find(acc => acc.context.device?.iotId === iotId)?.context.device;
         let catList = [];
         let recordList = [];
-        if (deviceContext) {
+        if (shouldFetchRecords && deviceContext) {
             try {
                 const records = await this.neakasaApi.getRecords(deviceContext.deviceName);
                 catList = records.cat_list || [];
@@ -233,14 +268,17 @@ class NeakasaPlatform {
         await accessory.updateData(deviceData);
     }
     sanitizeConfig(rawConfig) {
+        const validatedCatPresentLatchSeconds = this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
+            DEFAULT_CAT_PRESENT_LATCH_SECONDS;
         const config = {
             ...rawConfig,
             username: typeof rawConfig.username === 'string' ? rawConfig.username.trim() : rawConfig.username,
             password: typeof rawConfig.password === 'string' ? rawConfig.password : rawConfig.password,
             pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS,
+            catPresentLatchSeconds: validatedCatPresentLatchSeconds,
             startupBehavior: this.validateStartupBehavior(rawConfig.startupBehavior),
             startupDelaySeconds: this.validateStartupDelay(rawConfig.startupDelaySeconds),
-            deviceOverrides: this.validateDeviceOverrides(rawConfig.deviceOverrides, rawConfig.pollInterval),
+            deviceOverrides: this.validateDeviceOverrides(rawConfig.deviceOverrides, rawConfig.pollInterval, validatedCatPresentLatchSeconds),
         };
         return config;
     }
@@ -250,6 +288,16 @@ class NeakasaPlatform {
         }
         if (!Number.isInteger(value) || value < MIN_POLL_INTERVAL_SECONDS) {
             this.log.warn(`${context} must be an integer >= ${MIN_POLL_INTERVAL_SECONDS}; using default`);
+            return undefined;
+        }
+        return value;
+    }
+    validateCatPresentLatchSeconds(value, context) {
+        if (value === undefined || value === null) {
+            return undefined;
+        }
+        if (!Number.isInteger(value) || value < 0) {
+            this.log.warn(`${context} must be an integer >= 0; using default`);
             return undefined;
         }
         return value;
@@ -274,7 +322,7 @@ class NeakasaPlatform {
         }
         return value;
     }
-    validateDeviceOverrides(overrides, globalPollInterval) {
+    validateDeviceOverrides(overrides, globalPollInterval, globalCatPresentLatchSeconds) {
         if (!Array.isArray(overrides)) {
             return [];
         }
@@ -298,6 +346,8 @@ class NeakasaPlatform {
             seenIotIds.add(iotId);
             const pollInterval = this.validatePollInterval(override.pollInterval, `deviceOverrides[${i}].pollInterval`) ||
                 (this.validatePollInterval(globalPollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS);
+            const catPresentLatchSeconds = this.validateCatPresentLatchSeconds(override.catPresentLatchSeconds, `deviceOverrides[${i}].catPresentLatchSeconds`) ??
+                globalCatPresentLatchSeconds;
             const features = {};
             for (const key of FEATURE_KEYS) {
                 const flatValue = override[key];
@@ -317,6 +367,7 @@ class NeakasaPlatform {
                 name: typeof override.name === 'string' ? override.name.trim() : undefined,
                 hidden: override.hidden === true,
                 pollInterval,
+                catPresentLatchSeconds,
                 features,
             });
         }
@@ -334,9 +385,13 @@ class NeakasaPlatform {
     }
     buildAccessoryConfig(iotId) {
         const featureConfig = this.getFeatureConfig(iotId);
+        const override = this.getDeviceOverride(iotId);
         return {
             ...this.config,
             ...featureConfig,
+            ...(override?.catPresentLatchSeconds !== undefined
+                ? { catPresentLatchSeconds: override.catPresentLatchSeconds }
+                : {}),
         };
     }
     getFeatureConfig(iotId) {
@@ -387,7 +442,7 @@ class NeakasaPlatform {
         }
     }
     logConfigStartupChecks() {
-        this.log.info(`Startup checks: pollInterval=${this.config.pollInterval}s, ` +
+        this.log.info(`Startup checks: pollInterval=${this.config.pollInterval}s, catPresentLatchSeconds=${this.config.catPresentLatchSeconds}s, ` +
             `startupBehavior=${this.config.startupBehavior}, startupDelaySeconds=${this.config.startupDelaySeconds}`);
         if ((this.config.deviceOverrides?.length || 0) > 0) {
             this.log.info(`Startup checks: loaded ${this.config.deviceOverrides?.length} device override(s)`);
@@ -405,10 +460,13 @@ class NeakasaPlatform {
             const hidden = override?.hidden === true;
             const displayName = override?.name || device.deviceName || this.config.deviceName || 'Neakasa M1';
             const pollInterval = override?.pollInterval || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
+            const catPresentLatchSeconds = override?.catPresentLatchSeconds ??
+                this.config.catPresentLatchSeconds ??
+                DEFAULT_CAT_PRESENT_LATCH_SECONDS;
             const enabledFeatures = FEATURE_KEYS
                 .filter(key => this.getFeatureConfig(device.iotId)[key])
                 .map(key => FEATURE_LABELS[key]);
-            this.log.info(`- ${displayName} [${device.iotId}] hidden=${hidden} poll=${pollInterval}s ` +
+            this.log.info(`- ${displayName} [${device.iotId}] hidden=${hidden} poll=${pollInterval}s catPresentLatch=${catPresentLatchSeconds}s ` +
                 `features=${enabledFeatures.length > 0 ? enabledFeatures.join(', ') : 'core-only'}`);
         }
         for (const override of this.config.deviceOverrides || []) {

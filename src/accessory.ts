@@ -5,6 +5,7 @@ import { DeviceData, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPl
 const FAULT_STATUSES = new Set([6, 7]); // Panels Missing, Interrupted
 const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
 const ACTION_SWITCH_RESET_MS = 150;
+const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();
@@ -282,6 +283,26 @@ export class NeakasaAccessory {
     return 2 * (rssi + 100);
   }
 
+  private getLastUseTimestampMs(lastUse: number): number {
+    // Neakasa may return epoch seconds or epoch milliseconds.
+    return lastUse < 1000000000000 ? lastUse * 1000 : lastUse;
+  }
+
+  private isCatPresentDetected(data: DeviceData): boolean {
+    if (data.bucketStatus === 4) {
+      return true;
+    }
+
+    const latchSeconds = this.config.catPresentLatchSeconds ?? DEFAULT_CAT_PRESENT_LATCH_SECONDS;
+    if (latchSeconds <= 0 || !data.lastUse) {
+      return false;
+    }
+
+    const nowMs = Date.now();
+    const lastUseMs = this.getLastUseTimestampMs(data.lastUse);
+    return nowMs >= lastUseMs && nowMs - lastUseMs <= latchSeconds * 1000;
+  }
+
   async updateData(data: DeviceData): Promise<void> {
     this.deviceData = data;
 
@@ -329,10 +350,11 @@ export class NeakasaAccessory {
 
     // Core: Cat Present
     const catPresentSensor = this.services.get('catPresent')!;
+    const catPresentDetected = this.isCatPresentDetected(data);
     this.updateIfChanged(
       catPresentSensor,
       this.platform.Characteristic.OccupancyDetected,
-      data.bucketStatus === 4 ?
+      catPresentDetected ?
         this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
         this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
     );

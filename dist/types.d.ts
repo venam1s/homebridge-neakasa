@@ -22,12 +22,14 @@ export interface DeviceOverrideConfig extends Partial<FeatureVisibilityConfig> {
     name?: string;
     hidden?: boolean;
     pollInterval?: number;
+    catPresentLatchSeconds?: number;
     features?: Partial<FeatureVisibilityConfig>;
 }
 export interface NeakasaPlatformConfig extends PlatformConfig {
     username: string;
     password: string;
     pollInterval?: number;
+    catPresentLatchSeconds?: number;
     debug?: boolean;
     deviceName?: string;
     startupBehavior?: StartupBehavior;

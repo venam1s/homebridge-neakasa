@@ -14,7 +14,7 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 
 | Service | HomeKit Type | Description |
 |---------|-------------|-------------|
-| **Cat Present** | Occupancy Sensor | Detects when a cat is in the litter box |
+| **Cat Present** | Occupancy Sensor | Detects live cat presence and can stay latched briefly after a visit for reliable automations |
 | **Waste Bin Full** | Occupancy Sensor | Alerts when the waste bin needs emptying |
 | **Status** | Contact Sensor | Shows device state (Idle, Cleaning, Cat Present, etc.) |
 | **Last Action** | Contact Sensor | Shows the most recent action result and timestamp |
@@ -52,6 +52,8 @@ For the fastest install + setup flow, use the [Quickstart Guide](./QUICKSTART.md
 > **Note:** The Fault Alert sensor uses Motion Sensor — "motion detected" means a fault is active. Use it to trigger HomeKit notifications or automations when the device jams or loses its panels.
 
 > **Note:** `Run Clean Cycle` and `Run Leveling` are intentionally momentary action switches. They reset back to off right after the command is sent and are blocked when `Cat Present` is active.
+
+> **Note:** `Cat Present` uses live status when available, plus a configurable `catPresentLatchSeconds` window (default `240`) after `catLeft` is reported by Neakasa. This helps catch short visits between polls.
 
 #### Cat Weight Sensors
 
@@ -100,6 +102,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "username": "your@email.com",
       "password": "your_password",
       "pollInterval": 60,
+      "catPresentLatchSeconds": 240,
       "startupBehavior": "immediate",
       "startupDelaySeconds": 0,
       "deviceOverrides": [],
@@ -119,6 +122,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `password` | Yes | — | Your Neakasa account password |
 | `deviceName` | No | `"Neakasa M1"` | Display name in HomeKit |
 | `pollInterval` | No | `60` | Update interval in seconds (min: 30) |
+| `catPresentLatchSeconds` | No | `240` | Keep `Cat Present` active for N seconds after `catLeft`; set `0` to disable latch |
 | `startupBehavior` | No | `"immediate"` | Startup refresh mode: `immediate` or `skipInitialUpdate` |
 | `startupDelaySeconds` | No | `0` | Delay initial refresh at startup (seconds) |
 | `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, hidden status, polling, and feature flags |
@@ -148,6 +152,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
   "username": "your@email.com",
   "password": "your_password",
   "pollInterval": 60,
+  "catPresentLatchSeconds": 240,
   "startupBehavior": "immediate",
   "startupDelaySeconds": 5,
   "deviceOverrides": [
@@ -156,6 +161,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "name": "Upstairs Litter Box",
       "hidden": false,
       "pollInterval": 30,
+      "catPresentLatchSeconds": 240,
       "showFaultSensor": true,
       "showWifiSensor": true,
       "showCatSensors": false

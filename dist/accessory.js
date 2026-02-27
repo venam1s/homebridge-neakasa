@@ -5,6 +5,7 @@ const types_1 = require("./types");
 const FAULT_STATUSES = new Set([6, 7]);
 const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
 const ACTION_SWITCH_RESET_MS = 150;
+const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 class NeakasaAccessory {
     constructor(platform, accessory, iotId, deviceName, config) {
         this.platform = platform;
@@ -196,6 +197,21 @@ class NeakasaAccessory {
         }
         return 2 * (rssi + 100);
     }
+    getLastUseTimestampMs(lastUse) {
+        return lastUse < 1000000000000 ? lastUse * 1000 : lastUse;
+    }
+    isCatPresentDetected(data) {
+        if (data.bucketStatus === 4) {
+            return true;
+        }
+        const latchSeconds = this.config.catPresentLatchSeconds ?? DEFAULT_CAT_PRESENT_LATCH_SECONDS;
+        if (latchSeconds <= 0 || !data.lastUse) {
+            return false;
+        }
+        const nowMs = Date.now();
+        const lastUseMs = this.getLastUseTimestampMs(data.lastUse);
+        return nowMs >= lastUseMs && nowMs - lastUseMs <= latchSeconds * 1000;
+    }
     async updateData(data) {
         this.deviceData = data;
         const filterService = this.services.get('filter');
@@ -221,7 +237,8 @@ class NeakasaAccessory {
         const statusName = types_1.BucketStatus[data.bucketStatus] || `Unknown (${data.bucketStatus})`;
         this.updateIfChanged(statusSensor, this.platform.Characteristic.Name, statusName);
         const catPresentSensor = this.services.get('catPresent');
-        this.updateIfChanged(catPresentSensor, this.platform.Characteristic.OccupancyDetected, data.bucketStatus === 4 ?
+        const catPresentDetected = this.isCatPresentDetected(data);
+        this.updateIfChanged(catPresentSensor, this.platform.Characteristic.OccupancyDetected, catPresentDetected ?
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED :
             this.platform.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
         const childLockService = this.services.get('childLock');

@@ -332,10 +332,11 @@ class NeakasaAPI {
         try {
             const response = await client.doRequest('/thing/properties/get', body);
             if (response.code !== 200) {
-                if (response.message.includes('identityId is blank')) {
+                const message = typeof response.message === 'string' ? response.message : '';
+                if (message.includes('identityId is blank')) {
                     this.connected = false;
                 }
-                throw new NeakasaAPIError(`Failed to get device properties: ${response.message}`);
+                throw new NeakasaAPIError(`Failed to get device properties: ${message || 'unknown error'}`);
             }
             return response.data;
         }

@@ -23,6 +23,8 @@ export declare class NeakasaAccessory {
     private getActionTimestamp;
     private setLastActionResult;
     private rssiToPercent;
+    private getLastUseTimestampMs;
+    private isCatPresentDetected;
     updateData(data: DeviceData): Promise<void>;
     private updateCatSensors;
     setAutoClean(value: CharacteristicValue): Promise<void>;

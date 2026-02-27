@@ -27,6 +27,13 @@
         "minimum": 30,
         "description": "How often to check for updates from the Neakasa cloud"
       },
+      "catPresentLatchSeconds": {
+        "title": "Cat Present Latch (seconds)",
+        "type": "integer",
+        "default": 240,
+        "minimum": 0,
+        "description": "Keep Cat Present active for this many seconds after catLeft is reported. Set 0 to disable latch and use only live status."
+      },
       "startupBehavior": {
         "title": "Startup Behavior",
         "type": "string",
@@ -173,6 +180,12 @@
               "type": "integer",
               "minimum": 30,
               "description": "Override poll interval for this device (min: 30)"
+            },
+            "catPresentLatchSeconds": {
+              "title": "Cat Present Latch (seconds)",
+              "type": "integer",
+              "minimum": 0,
+              "description": "Override Cat Present latch duration for this device. Set 0 to disable."
             },
             "showChildLock": {
               "title": "Child Lock",
@@ -339,6 +352,10 @@
           "flex": "1 1 50%"
         },
         {
+          "key": "catPresentLatchSeconds",
+          "flex": "1 1 50%"
+        },
+        {
           "key": "startupDelaySeconds",
           "flex": "1 1 50%"
         }
@@ -391,6 +408,7 @@
             "deviceOverrides[].name",
             "deviceOverrides[].hidden",
             "deviceOverrides[].pollInterval",
+            "deviceOverrides[].catPresentLatchSeconds",
             {
               "type": "fieldset",
               "title": "Feature Overrides",

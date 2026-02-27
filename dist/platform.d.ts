@@ -10,6 +10,9 @@ export declare class NeakasaPlatform implements DynamicPlatformPlugin {
     private readonly deviceAccessories;
     private readonly devicePollIntervals;
     private readonly lastPolledAt;
+    private pollRunInProgress;
+    private pollRunQueued;
+    private queuedPollForceAll;
     private pollInterval?;
     private startupTimeout?;
     private readonly config;
@@ -17,10 +20,13 @@ export declare class NeakasaPlatform implements DynamicPlatformPlugin {
     configureAccessory(accessory: PlatformAccessory): void;
     discoverDevices(): Promise<void>;
     private startPolling;
+    private enqueuePollRun;
+    private flushQueuedPollRuns;
     private updateAllDueDevices;
     private updateDevice;
     private sanitizeConfig;
     private validatePollInterval;
+    private validateCatPresentLatchSeconds;
     private validateStartupBehavior;
     private validateStartupDelay;
     private validateDeviceOverrides;
