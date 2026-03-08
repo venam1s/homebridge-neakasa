@@ -217,6 +217,10 @@ export class NeakasaAccessory {
     } else {
       this.removeServiceIfExists('recently-used');
     }
+
+    if (this.config.showCatSensors !== true) {
+      this.removeCatWeightServices();
+    }
   }
 
   private addSwitch(
@@ -267,8 +271,56 @@ export class NeakasaAccessory {
     }, ACTION_SWITCH_RESET_MS);
   }
 
-  private isCatPresent(): boolean {
-    return this.deviceData?.bucketStatus === 4;
+  private async isCatPresentLive(): Promise<boolean> {
+    const properties = await this.platform.neakasaApi.getDeviceProperties(this.iotId);
+    const bucketStatus = properties.bucketStatus?.value;
+
+    if (typeof bucketStatus !== 'number') {
+      throw new Error('Missing bucketStatus in device properties');
+    }
+
+    if (this.deviceData) {
+      this.deviceData.bucketStatus = bucketStatus;
+    }
+
+    return bucketStatus === 4;
+  }
+
+  private async shouldBlockActionForCatPresence(actionName: string): Promise<boolean> {
+    try {
+      const catPresent = await this.isCatPresentLive();
+      if (!catPresent) {
+        return false;
+      }
+
+      this.platform.log.warn(`Blocked ${actionName} for ${this.deviceName} because cat presence is active`);
+      this.setLastActionResult(`${actionName} blocked: cat present`, false);
+      return true;
+    } catch (error) {
+      this.platform.log.error(`Failed to verify live cat presence for ${actionName}: ${error}`);
+      this.setLastActionResult(`${actionName} blocked: unable to verify cat presence`, false);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+  }
+
+  private removeCatWeightServices(activeSubTypes?: Set<string>): void {
+    const servicesToRemove = this.accessory.services.filter(service => {
+      const subType = service.subtype;
+      if (!subType || !subType.startsWith('cat-')) {
+        return false;
+      }
+      if (subType === 'cat-present' || subType === 'cat-visit') {
+        return false;
+      }
+      return !activeSubTypes || !activeSubTypes.has(subType);
+    });
+
+    for (const service of servicesToRemove) {
+      this.accessory.removeService(service);
+      if (service.subtype) {
+        this.services.delete(service.subtype);
+      }
+    }
   }
 
   private getActionTimestamp(): string {
@@ -503,6 +555,8 @@ export class NeakasaAccessory {
     // Optional: Cat Weight sensors
     if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
       this.updateCatSensors(data);
+    } else {
+      this.removeCatWeightServices();
     }
 
     if (this.previousData && data.lastUse > 0 && data.lastUse !== previousLastUse) {
@@ -519,8 +573,11 @@ export class NeakasaAccessory {
   }
 
   private updateCatSensors(data: DeviceData): void {
+    const activeSubTypes = new Set<string>();
+
     for (const cat of data.cat_list) {
       const subType = `cat-${cat.id}`;
+      activeSubTypes.add(subType);
       let catSensor = this.services.get(subType);
 
       if (!catSensor) {
@@ -556,14 +613,18 @@ export class NeakasaAccessory {
         catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, displayWeight);
       }
     }
+
+    this.removeCatWeightServices(activeSubTypes);
   }
 
   // Switch handlers
   async setAutoClean(value: CharacteristicValue): Promise<void> {
     const newValue = value as boolean;
     try {
-      const cleanCfg = this.deviceData?.cleanCfg || { active: 0 };
-      cleanCfg.active = newValue ? 1 : 0;
+      const cleanCfg = {
+        ...(this.deviceData?.cleanCfg || {}),
+        active: newValue ? 1 : 0,
+      };
       await this.platform.neakasaApi.setDeviceProperties(this.iotId, { cleanCfg });
       this.platform.log.info(`Set Auto Clean to ${newValue}`);
     } catch (error) {
@@ -720,10 +781,7 @@ export class NeakasaAccessory {
 
     this.resetActionSwitch('runCleanCycle');
 
-    if (this.isCatPresent()) {
-      const message = `Blocked Run Clean Cycle for ${this.deviceName} because cat presence is active`;
-      this.platform.log.warn(message);
-      this.setLastActionResult('Run Clean Cycle blocked: cat present', false);
+    if (await this.shouldBlockActionForCatPresence('Run Clean Cycle')) {
       return;
     }
 
@@ -745,10 +803,7 @@ export class NeakasaAccessory {
 
     this.resetActionSwitch('runLeveling');
 
-    if (this.isCatPresent()) {
-      const message = `Blocked Run Leveling for ${this.deviceName} because cat presence is active`;
-      this.platform.log.warn(message);
-      this.setLastActionResult('Run Leveling blocked: cat present', false);
+    if (await this.shouldBlockActionForCatPresence('Run Leveling')) {
       return;
     }
 

@@ -23,6 +23,7 @@ export declare class NeakasaPlatform implements DynamicPlatformPlugin {
     private enqueuePollRun;
     private flushQueuedPollRuns;
     private updateAllDueDevices;
+    private isNotConnectedError;
     private updateDevice;
     private sanitizeConfig;
     private validatePollInterval;

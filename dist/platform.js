@@ -204,6 +204,7 @@ class NeakasaPlatform {
     }
     async updateAllDueDevices(forceAll) {
         const now = Date.now();
+        let reconnectAttempted = false;
         for (const [iotId, accessory] of this.deviceAccessories.entries()) {
             const intervalSeconds = this.devicePollIntervals.get(iotId) || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
             const lastPolledAt = this.lastPolledAt.get(iotId) || 0;
@@ -217,7 +218,12 @@ class NeakasaPlatform {
             }
             catch (error) {
                 this.log.error(`Failed to update device ${iotId}:`, error);
-                if (error instanceof Error && error.message.includes('not connected')) {
+                if (this.isNotConnectedError(error)) {
+                    if (reconnectAttempted) {
+                        this.log.warn('Reconnect already attempted in this poll run; skipping additional reconnect attempts');
+                        continue;
+                    }
+                    reconnectAttempted = true;
                     this.log.warn('Attempting to reconnect to Neakasa API...');
                     try {
                         await this.neakasaApi.connect(this.config.username, this.config.password);
@@ -227,6 +233,7 @@ class NeakasaPlatform {
                     }
                     catch (reconnectError) {
                         this.log.error('Failed to reconnect:', reconnectError);
+                        return;
                     }
                 }
             }
@@ -236,6 +243,9 @@ class NeakasaPlatform {
                 }
             }
         }
+    }
+    isNotConnectedError(error) {
+        return error instanceof Error && error.message.toLowerCase().includes('not connected');
     }
     async updateDevice(iotId, accessory) {
         const properties = await this.neakasaApi.getDeviceProperties(iotId);

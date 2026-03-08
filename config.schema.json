@@ -455,6 +455,7 @@
       "expandable": true,
       "items": [
         "showChildLock",
+        "showAutoLevelClean",
         "showEmptyBin",
         "showAutoBury",
         "showAutoLevel",
@@ -501,6 +502,7 @@
               "expandable": true,
               "items": [
                 "deviceOverrides[].showChildLock",
+                "deviceOverrides[].showAutoLevelClean",
                 "deviceOverrides[].showEmptyBin",
                 "deviceOverrides[].showAutoBury",
                 "deviceOverrides[].showAutoLevel",

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.1] - 2026-03-08
+
+### Fixed
+- Safety hardening: `Run Clean Cycle` and `Run Leveling` now verify live `bucketStatus` from the API at action time to reduce stale cached-state windows.
+- Reliability hardening: poll loop now limits reconnect attempts to one per poll run when auth/session is lost, avoiding reconnect storms across multiple devices.
+- Cat Weight service lifecycle: stale dynamic `cat-*` sensors are now removed when cats disappear from records or when cat sensors are disabled.
+- State consistency: `setAutoClean` now avoids mutating cached `cleanCfg` before the API write succeeds.
+- Config UI layout: `showAutoLevelClean` is now exposed in both the global Optional Switches section and per-device Feature Overrides section.
+
 ## [1.9.0] - 2026-02-27
 
 ### Added

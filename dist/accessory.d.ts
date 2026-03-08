@@ -19,7 +19,9 @@ export declare class NeakasaAccessory {
     private addOptionalSwitch;
     private removeServiceIfExists;
     private resetActionSwitch;
-    private isCatPresent;
+    private isCatPresentLive;
+    private shouldBlockActionForCatPresence;
+    private removeCatWeightServices;
     private getActionTimestamp;
     private setLastActionResult;
     private rssiToPercent;

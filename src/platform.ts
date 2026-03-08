@@ -252,6 +252,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
   private async updateAllDueDevices(forceAll: boolean): Promise<void> {
     const now = Date.now();
+    let reconnectAttempted = false;
 
     for (const [iotId, accessory] of this.deviceAccessories.entries()) {
       const intervalSeconds = this.devicePollIntervals.get(iotId) || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
@@ -270,7 +271,13 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         this.log.error(`Failed to update device ${iotId}:`, error);
 
         // Try to reconnect if it's an auth error.
-        if (error instanceof Error && error.message.includes('not connected')) {
+        if (this.isNotConnectedError(error)) {
+          if (reconnectAttempted) {
+            this.log.warn('Reconnect already attempted in this poll run; skipping additional reconnect attempts');
+            continue;
+          }
+
+          reconnectAttempted = true;
           this.log.warn('Attempting to reconnect to Neakasa API...');
           try {
             await this.neakasaApi.connect(this.config.username, this.config.password);
@@ -279,6 +286,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
             updatedSuccessfully = true;
           } catch (reconnectError) {
             this.log.error('Failed to reconnect:', reconnectError);
+            return;
           }
         }
       } finally {
@@ -287,6 +295,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         }
       }
     }
+  }
+
+  private isNotConnectedError(error: unknown): boolean {
+    return error instanceof Error && error.message.toLowerCase().includes('not connected');
   }
 
   private async updateDevice(iotId: string, accessory: NeakasaAccessory): Promise<void> {
