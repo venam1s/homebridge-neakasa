@@ -20,6 +20,8 @@ export class NeakasaAuthError extends Error {
 }
 
 export class NeakasaAPI {
+  // App-level credentials for the Neakasa mobile app (reverse-engineered from the Android APK).
+  // These are shared across all installations and are NOT user secrets.
   private readonly appKey: string = '32715650';
   private readonly appSecret: string = '698ee0ef531c3df2ddded87563643860';
   private readonly language: string = 'en-US';

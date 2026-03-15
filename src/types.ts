@@ -22,16 +22,20 @@ export interface FeatureVisibilityConfig {
   useImperialUnits: boolean;
 }
 
-export interface DeviceOverrideConfig extends Partial<FeatureVisibilityConfig> {
-  iotId: string;
-  name?: string;
-  hidden?: boolean;
+export interface DeviceSettingsConfig extends Partial<FeatureVisibilityConfig> {
   pollInterval?: number;
   recordDays?: number;
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;
   features?: Partial<FeatureVisibilityConfig>;
+}
+
+export interface DeviceOverrideConfig extends DeviceSettingsConfig {
+  iotId: string;
+  name?: string;
+  hidden?: boolean;
+  profile?: string;
 }
 
 export interface NeakasaPlatformConfig extends PlatformConfig {
@@ -46,6 +50,8 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   deviceName?: string;
   startupBehavior?: StartupBehavior;
   startupDelaySeconds?: number;
+  defaults?: DeviceSettingsConfig;
+  profiles?: Record<string, DeviceSettingsConfig>;
   deviceOverrides?: DeviceOverrideConfig[];
   // Optional switches (all default false)
   showAutoLevelClean?: boolean;

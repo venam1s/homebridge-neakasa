@@ -7,6 +7,7 @@ import {
   NeakasaDevice,
   DeviceData,
   DeviceOverrideConfig,
+  DeviceSettingsConfig,
   FeatureVisibilityConfig,
   StartupBehavior,
 } from './types';
@@ -60,6 +61,15 @@ const FEATURE_LABELS: Record<keyof FeatureVisibilityConfig, string> = {
   showFaultSensor: 'Fault Sensor',
   useImperialUnits: 'Imperial Units',
 };
+
+interface ResolvedDeviceConfig {
+  pollInterval: number;
+  recordDays: number;
+  catPresentLatchSeconds: number;
+  catVisitLatchSeconds: number;
+  recentlyUsedMinutes: number;
+  features: FeatureVisibilityConfig;
+}
 
 export class NeakasaPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
@@ -128,6 +138,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
       for (const device of devices) {
         const override = this.getDeviceOverride(device.iotId);
+        const resolvedConfig = this.getResolvedDeviceConfig(device.iotId);
 
         if (override?.hidden === true) {
           this.log.info(`Skipping hidden device ${device.deviceName} (${device.iotId})`);
@@ -136,7 +147,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         }
 
         activeIotIds.add(device.iotId);
-        this.devicePollIntervals.set(device.iotId, override?.pollInterval || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS);
+        this.devicePollIntervals.set(device.iotId, resolvedConfig.pollInterval);
 
         const displayName = override?.name || device.deviceName || defaultDisplayName;
         const accessoryConfig = this.buildAccessoryConfig(device.iotId);
@@ -286,7 +297,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
             updatedSuccessfully = true;
           } catch (reconnectError) {
             this.log.error('Failed to reconnect:', reconnectError);
-            return;
+            continue;
           }
         }
       } finally {
@@ -345,38 +356,56 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   }
 
   private sanitizeConfig(rawConfig: NeakasaPlatformConfig): NeakasaPlatformConfig {
-    const validatedRecordDays =
-      this.validateRecordDays(rawConfig.recordDays, 'recordDays') ??
-      DEFAULT_RECORD_DAYS;
-    const validatedCatPresentLatchSeconds =
-      this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
-      DEFAULT_CAT_PRESENT_LATCH_SECONDS;
-    const validatedCatVisitLatchSeconds =
-      this.validateNonNegativeInt(rawConfig.catVisitLatchSeconds, 'catVisitLatchSeconds') ??
-      DEFAULT_CAT_VISIT_LATCH_SECONDS;
-    const validatedRecentlyUsedMinutes =
-      this.validateNonNegativeInt(rawConfig.recentlyUsedMinutes, 'recentlyUsedMinutes') ??
-      DEFAULT_RECENTLY_USED_MINUTES;
+    const topLevelDefaults: ResolvedDeviceConfig = {
+      pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS,
+      recordDays: this.validateRecordDays(rawConfig.recordDays, 'recordDays') ?? DEFAULT_RECORD_DAYS,
+      catPresentLatchSeconds:
+        this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
+        DEFAULT_CAT_PRESENT_LATCH_SECONDS,
+      catVisitLatchSeconds:
+        this.validateNonNegativeInt(rawConfig.catVisitLatchSeconds, 'catVisitLatchSeconds') ??
+        DEFAULT_CAT_VISIT_LATCH_SECONDS,
+      recentlyUsedMinutes:
+        this.validateNonNegativeInt(rawConfig.recentlyUsedMinutes, 'recentlyUsedMinutes') ??
+        DEFAULT_RECENTLY_USED_MINUTES,
+      features: this.mergeFeatureConfig(this.createDefaultFeatureConfig(), rawConfig),
+    };
+
+    const defaultsLayer = this.normalizeDeviceSettingsLayer(rawConfig.defaults, 'defaults');
+    const effectiveDefaults = this.mergeResolvedDeviceConfig(topLevelDefaults, defaultsLayer);
+    const profiles = this.validateProfiles(rawConfig.profiles);
 
     const config: NeakasaPlatformConfig = {
       ...rawConfig,
       username: typeof rawConfig.username === 'string' ? rawConfig.username.trim() : rawConfig.username,
       password: typeof rawConfig.password === 'string' ? rawConfig.password : rawConfig.password,
-      pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS,
-      recordDays: validatedRecordDays,
-      catPresentLatchSeconds: validatedCatPresentLatchSeconds,
-      catVisitLatchSeconds: validatedCatVisitLatchSeconds,
-      recentlyUsedMinutes: validatedRecentlyUsedMinutes,
+      pollInterval: effectiveDefaults.pollInterval,
+      recordDays: effectiveDefaults.recordDays,
+      catPresentLatchSeconds: effectiveDefaults.catPresentLatchSeconds,
+      catVisitLatchSeconds: effectiveDefaults.catVisitLatchSeconds,
+      recentlyUsedMinutes: effectiveDefaults.recentlyUsedMinutes,
       startupBehavior: this.validateStartupBehavior(rawConfig.startupBehavior),
       startupDelaySeconds: this.validateStartupDelay(rawConfig.startupDelaySeconds),
-      deviceOverrides: this.validateDeviceOverrides(
-        rawConfig.deviceOverrides,
-        rawConfig.pollInterval,
-        validatedRecordDays,
-        validatedCatPresentLatchSeconds,
-        validatedCatVisitLatchSeconds,
-        validatedRecentlyUsedMinutes,
-      ),
+      showAutoLevelClean: effectiveDefaults.features.showAutoLevelClean,
+      showChildLock: effectiveDefaults.features.showChildLock,
+      showEmptyBin: effectiveDefaults.features.showEmptyBin,
+      showAutoBury: effectiveDefaults.features.showAutoBury,
+      showAutoLevel: effectiveDefaults.features.showAutoLevel,
+      showSilentMode: effectiveDefaults.features.showSilentMode,
+      showUnstoppableCycle: effectiveDefaults.features.showUnstoppableCycle,
+      showAutoRecovery: effectiveDefaults.features.showAutoRecovery,
+      showYoungCatMode: effectiveDefaults.features.showYoungCatMode,
+      showBinStateSensor: effectiveDefaults.features.showBinStateSensor,
+      showWifiSensor: effectiveDefaults.features.showWifiSensor,
+      showCatSensors: effectiveDefaults.features.showCatSensors,
+      showCatVisitSensor: effectiveDefaults.features.showCatVisitSensor,
+      showRecentlyUsedSensor: effectiveDefaults.features.showRecentlyUsedSensor,
+      showSandLevelSensor: effectiveDefaults.features.showSandLevelSensor,
+      showFaultSensor: effectiveDefaults.features.showFaultSensor,
+      useImperialUnits: effectiveDefaults.features.useImperialUnits,
+      defaults: defaultsLayer,
+      profiles,
+      deviceOverrides: this.validateDeviceOverrides(rawConfig.deviceOverrides, Object.keys(profiles)),
     };
 
     return config;
@@ -451,18 +480,136 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     return value;
   }
 
+  private createDefaultFeatureConfig(): FeatureVisibilityConfig {
+    return {
+      showAutoLevelClean: false,
+      showChildLock: false,
+      showEmptyBin: false,
+      showAutoBury: false,
+      showAutoLevel: false,
+      showSilentMode: false,
+      showUnstoppableCycle: false,
+      showAutoRecovery: false,
+      showYoungCatMode: false,
+      showBinStateSensor: false,
+      showWifiSensor: false,
+      showCatSensors: false,
+      showCatVisitSensor: false,
+      showRecentlyUsedSensor: false,
+      showSandLevelSensor: false,
+      showFaultSensor: false,
+      useImperialUnits: false,
+    };
+  }
+
+  private mergeFeatureConfig(
+    base: FeatureVisibilityConfig,
+    source: (Partial<FeatureVisibilityConfig> & { features?: Partial<FeatureVisibilityConfig> }) | undefined,
+  ): FeatureVisibilityConfig {
+    if (!source || typeof source !== 'object') {
+      return base;
+    }
+
+    const merged = { ...base };
+    const nestedFeatures = source.features && typeof source.features === 'object' ? source.features : undefined;
+
+    for (const key of FEATURE_KEYS) {
+      const flatValue = source[key];
+      if (typeof flatValue === 'boolean') {
+        merged[key] = flatValue;
+      }
+
+      const nestedValue = nestedFeatures?.[key];
+      if (typeof nestedValue === 'boolean') {
+        merged[key] = nestedValue;
+      }
+    }
+
+    return merged;
+  }
+
+  private normalizeDeviceSettingsLayer(
+    layer: DeviceSettingsConfig | undefined,
+    context: string,
+  ): DeviceSettingsConfig {
+    if (layer === undefined || layer === null) {
+      return {};
+    }
+
+    if (typeof layer !== 'object' || Array.isArray(layer)) {
+      this.log.warn(`${context} is invalid and was ignored`);
+      return {};
+    }
+
+    const normalized: DeviceSettingsConfig = {};
+    const pollInterval = this.validatePollInterval(layer.pollInterval, `${context}.pollInterval`);
+    const recordDays = this.validateRecordDays(layer.recordDays, `${context}.recordDays`);
+    const catPresentLatchSeconds = this.validateCatPresentLatchSeconds(
+      layer.catPresentLatchSeconds,
+      `${context}.catPresentLatchSeconds`,
+    );
+    const catVisitLatchSeconds = this.validateNonNegativeInt(layer.catVisitLatchSeconds, `${context}.catVisitLatchSeconds`);
+    const recentlyUsedMinutes = this.validateNonNegativeInt(layer.recentlyUsedMinutes, `${context}.recentlyUsedMinutes`);
+
+    if (pollInterval !== undefined) {
+      normalized.pollInterval = pollInterval;
+    }
+    if (recordDays !== undefined) {
+      normalized.recordDays = recordDays;
+    }
+    if (catPresentLatchSeconds !== undefined) {
+      normalized.catPresentLatchSeconds = catPresentLatchSeconds;
+    }
+    if (catVisitLatchSeconds !== undefined) {
+      normalized.catVisitLatchSeconds = catVisitLatchSeconds;
+    }
+    if (recentlyUsedMinutes !== undefined) {
+      normalized.recentlyUsedMinutes = recentlyUsedMinutes;
+    }
+
+    const features = this.extractFeatureOverrides(layer);
+    if (Object.keys(features).length > 0) {
+      normalized.features = features;
+    }
+
+    return normalized;
+  }
+
+  private validateProfiles(
+    profiles: Record<string, DeviceSettingsConfig> | undefined,
+  ): Record<string, DeviceSettingsConfig> {
+    if (profiles === undefined || profiles === null) {
+      return {};
+    }
+
+    if (typeof profiles !== 'object' || Array.isArray(profiles)) {
+      this.log.warn('profiles is invalid and was ignored');
+      return {};
+    }
+
+    const validated: Record<string, DeviceSettingsConfig> = {};
+    for (const [name, layer] of Object.entries(profiles)) {
+      const trimmedName = typeof name === 'string' ? name.trim() : '';
+      if (!trimmedName) {
+        this.log.warn('profiles contains an empty profile name; entry ignored');
+        continue;
+      }
+
+      validated[trimmedName] = this.normalizeDeviceSettingsLayer(layer, `profiles.${trimmedName}`);
+    }
+
+    return validated;
+  }
+
   private validateDeviceOverrides(
     overrides: DeviceOverrideConfig[] | undefined,
-    globalPollInterval: number | undefined,
-    globalRecordDays: number,
-    globalCatPresentLatchSeconds: number,
-    globalCatVisitLatchSeconds: number,
-    globalRecentlyUsedMinutes: number,
+    profileNames: string[],
   ): DeviceOverrideConfig[] {
     if (!Array.isArray(overrides)) {
       return [];
     }
 
+    const knownProfiles = new Set(profileNames);
     const seenIotIds = new Set<string>();
     const validated: DeviceOverrideConfig[] = [];
 
@@ -485,61 +632,109 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       }
       seenIotIds.add(iotId);
 
-      const pollInterval = this.validatePollInterval(override.pollInterval, `deviceOverrides[${i}].pollInterval`) ||
-        (this.validatePollInterval(globalPollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS);
+      const pollInterval = this.validatePollInterval(override.pollInterval, `deviceOverrides[${i}].pollInterval`);
       const recordDays = this.validateRecordDays(
         override.recordDays,
         `deviceOverrides[${i}].recordDays`,
-      ) ?? globalRecordDays;
-      const catPresentLatchSeconds =
-        this.validateCatPresentLatchSeconds(
-          override.catPresentLatchSeconds,
-          `deviceOverrides[${i}].catPresentLatchSeconds`,
-        ) ??
-        globalCatPresentLatchSeconds;
+      );
+      const catPresentLatchSeconds = this.validateCatPresentLatchSeconds(
+        override.catPresentLatchSeconds,
+        `deviceOverrides[${i}].catPresentLatchSeconds`,
+      );
       const catVisitLatchSeconds = this.validateNonNegativeInt(
         override.catVisitLatchSeconds,
         `deviceOverrides[${i}].catVisitLatchSeconds`,
-      ) ?? globalCatVisitLatchSeconds;
+      );
       const recentlyUsedMinutes = this.validateNonNegativeInt(
         override.recentlyUsedMinutes,
         `deviceOverrides[${i}].recentlyUsedMinutes`,
-      ) ?? globalRecentlyUsedMinutes;
-
-      const features: Partial<FeatureVisibilityConfig> = {};
-      for (const key of FEATURE_KEYS) {
-        const flatValue = override[key];
-        if (typeof flatValue === 'boolean') {
-          features[key] = flatValue;
-          continue;
-        }
-
-        const nestedValue = override.features && typeof override.features === 'object'
-          ? override.features[key]
-          : undefined;
-        if (typeof nestedValue === 'boolean') {
-          features[key] = nestedValue;
-        }
+      );
+      const profile = typeof override.profile === 'string' ? override.profile.trim() : '';
+      if (profile && !knownProfiles.has(profile)) {
+        this.log.warn(`deviceOverrides[${i}].profile "${profile}" was not found in profiles; using inherited defaults`);
       }
+
+      const features = this.extractFeatureOverrides(override);
 
       validated.push({
         iotId,
         name: typeof override.name === 'string' ? override.name.trim() : undefined,
         hidden: override.hidden === true,
-        pollInterval,
-        recordDays,
-        catPresentLatchSeconds,
-        catVisitLatchSeconds,
-        recentlyUsedMinutes,
-        features,
+        profile: profile && knownProfiles.has(profile) ? profile : undefined,
+        ...(pollInterval !== undefined ? { pollInterval } : {}),
+        ...(recordDays !== undefined ? { recordDays } : {}),
+        ...(catPresentLatchSeconds !== undefined ? { catPresentLatchSeconds } : {}),
+        ...(catVisitLatchSeconds !== undefined ? { catVisitLatchSeconds } : {}),
+        ...(recentlyUsedMinutes !== undefined ? { recentlyUsedMinutes } : {}),
+        ...(Object.keys(features).length > 0 ? { features } : {}),
       });
     }
 
     return validated;
   }
 
+  private extractFeatureOverrides(
+    source: (Partial<FeatureVisibilityConfig> & { features?: Partial<FeatureVisibilityConfig> }) | undefined,
+  ): Partial<FeatureVisibilityConfig> {
+    if (!source || typeof source !== 'object') {
+      return {};
+    }
+
+    const features: Partial<FeatureVisibilityConfig> = {};
+    const nestedFeatures = source.features && typeof source.features === 'object' ? source.features : undefined;
+
+    for (const key of FEATURE_KEYS) {
+      const flatValue = source[key];
+      if (typeof flatValue === 'boolean') {
+        features[key] = flatValue;
+        continue;
+      }
+
+      const nestedValue = nestedFeatures?.[key];
+      if (typeof nestedValue === 'boolean') {
+        features[key] = nestedValue;
+      }
+    }
+
+    return features;
+  }
+
   private getDeviceOverride(iotId: string): DeviceOverrideConfig | undefined {
     return this.config.deviceOverrides?.find(override => override.iotId === iotId);
+  }
+
+  private mergeResolvedDeviceConfig(base: ResolvedDeviceConfig, layer: DeviceSettingsConfig | undefined): ResolvedDeviceConfig {
+    if (!layer) {
+      return base;
+    }
+
+    return {
+      pollInterval: layer.pollInterval ?? base.pollInterval,
+      recordDays: layer.recordDays ?? base.recordDays,
+      catPresentLatchSeconds: layer.catPresentLatchSeconds ?? base.catPresentLatchSeconds,
+      catVisitLatchSeconds: layer.catVisitLatchSeconds ?? base.catVisitLatchSeconds,
+      recentlyUsedMinutes: layer.recentlyUsedMinutes ?? base.recentlyUsedMinutes,
+      features: this.mergeFeatureConfig(base.features, layer),
+    };
+  }
+
+  private getResolvedDeviceConfig(iotId: string): ResolvedDeviceConfig {
+    const base: ResolvedDeviceConfig = {
+      pollInterval: this.config.pollInterval ?? DEFAULT_POLL_INTERVAL_SECONDS,
+      recordDays: this.config.recordDays ?? DEFAULT_RECORD_DAYS,
+      catPresentLatchSeconds: this.config.catPresentLatchSeconds ?? DEFAULT_CAT_PRESENT_LATCH_SECONDS,
+      catVisitLatchSeconds: this.config.catVisitLatchSeconds ?? DEFAULT_CAT_VISIT_LATCH_SECONDS,
+      recentlyUsedMinutes: this.config.recentlyUsedMinutes ?? DEFAULT_RECENTLY_USED_MINUTES,
+      features: this.mergeFeatureConfig(this.createDefaultFeatureConfig(), this.config),
+    };
+
+    const override = this.getDeviceOverride(iotId);
+    const profile = override?.profile ? this.config.profiles?.[override.profile] : undefined;
+
+    return this.mergeResolvedDeviceConfig(
+      this.mergeResolvedDeviceConfig(base, profile),
+      override,
+    );
   }
 
   private getSchedulerTickSeconds(): number {
@@ -552,65 +747,25 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   }
 
   private buildAccessoryConfig(iotId: string): NeakasaPlatformConfig {
-    const featureConfig = this.getFeatureConfig(iotId);
-    const override = this.getDeviceOverride(iotId);
+    const resolvedConfig = this.getResolvedDeviceConfig(iotId);
 
     return {
       ...this.config,
-      ...featureConfig,
-      ...(override?.recordDays !== undefined
-        ? { recordDays: override.recordDays }
-        : {}),
-      ...(override?.catPresentLatchSeconds !== undefined
-        ? { catPresentLatchSeconds: override.catPresentLatchSeconds }
-        : {}),
-      ...(override?.catVisitLatchSeconds !== undefined
-        ? { catVisitLatchSeconds: override.catVisitLatchSeconds }
-        : {}),
-      ...(override?.recentlyUsedMinutes !== undefined
-        ? { recentlyUsedMinutes: override.recentlyUsedMinutes }
-        : {}),
+      ...resolvedConfig.features,
+      pollInterval: resolvedConfig.pollInterval,
+      recordDays: resolvedConfig.recordDays,
+      catPresentLatchSeconds: resolvedConfig.catPresentLatchSeconds,
+      catVisitLatchSeconds: resolvedConfig.catVisitLatchSeconds,
+      recentlyUsedMinutes: resolvedConfig.recentlyUsedMinutes,
     };
   }
 
   private getFeatureConfig(iotId: string): FeatureVisibilityConfig {
-    const base: FeatureVisibilityConfig = {
-      showAutoLevelClean: this.config.showAutoLevelClean === true,
-      showChildLock: this.config.showChildLock === true,
-      showEmptyBin: this.config.showEmptyBin === true,
-      showAutoBury: this.config.showAutoBury === true,
-      showAutoLevel: this.config.showAutoLevel === true,
-      showSilentMode: this.config.showSilentMode === true,
-      showUnstoppableCycle: this.config.showUnstoppableCycle === true,
-      showAutoRecovery: this.config.showAutoRecovery === true,
-      showYoungCatMode: this.config.showYoungCatMode === true,
-      showBinStateSensor: this.config.showBinStateSensor === true,
-      showWifiSensor: this.config.showWifiSensor === true,
-      showCatSensors: this.config.showCatSensors === true,
-      showCatVisitSensor: this.config.showCatVisitSensor === true,
-      showRecentlyUsedSensor: this.config.showRecentlyUsedSensor === true,
-      showSandLevelSensor: this.config.showSandLevelSensor === true,
-      showFaultSensor: this.config.showFaultSensor === true,
-      useImperialUnits: this.config.useImperialUnits === true,
-    };
-
-    const override = this.getDeviceOverride(iotId);
-    if (!override?.features) {
-      return base;
-    }
-
-    for (const key of FEATURE_KEYS) {
-      const overrideValue = override.features[key];
-      if (typeof overrideValue === 'boolean') {
-        base[key] = overrideValue;
-      }
-    }
-
-    return base;
+    return this.getResolvedDeviceConfig(iotId).features;
   }
 
   private getRecordDays(iotId: string): number {
-    return this.getDeviceOverride(iotId)?.recordDays ?? this.config.recordDays ?? DEFAULT_RECORD_DAYS;
+    return this.getResolvedDeviceConfig(iotId).recordDays;
   }
 
   private removeAccessoryByIotId(iotId: string): void {
@@ -644,6 +799,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     if ((this.config.deviceOverrides?.length || 0) > 0) {
       this.log.info(`Startup checks: loaded ${this.config.deviceOverrides?.length} device override(s)`);
     }
+
+    if (this.config.profiles && Object.keys(this.config.profiles).length > 0) {
+      this.log.info(`Startup checks: loaded ${Object.keys(this.config.profiles).length} profile(s)`);
+    }
   }
 
   private logDetectedDeviceSummary(devices: NeakasaDevice[]): void {
@@ -658,26 +817,18 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
     for (const device of devices) {
       const override = this.getDeviceOverride(device.iotId);
+      const resolved = this.getResolvedDeviceConfig(device.iotId);
       const hidden = override?.hidden === true;
       const displayName = override?.name || device.deviceName || this.config.deviceName || 'Neakasa M1';
-      const pollInterval = override?.pollInterval || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
-      const recordDays = override?.recordDays ?? this.config.recordDays ?? DEFAULT_RECORD_DAYS;
-      const catPresentLatchSeconds = override?.catPresentLatchSeconds ??
-        this.config.catPresentLatchSeconds ??
-        DEFAULT_CAT_PRESENT_LATCH_SECONDS;
-      const catVisitLatchSeconds = override?.catVisitLatchSeconds ??
-        this.config.catVisitLatchSeconds ??
-        DEFAULT_CAT_VISIT_LATCH_SECONDS;
-      const recentlyUsedMinutes = override?.recentlyUsedMinutes ??
-        this.config.recentlyUsedMinutes ??
-        DEFAULT_RECENTLY_USED_MINUTES;
       const enabledFeatures = FEATURE_KEYS
-        .filter(key => this.getFeatureConfig(device.iotId)[key])
+        .filter(key => resolved.features[key])
         .map(key => FEATURE_LABELS[key]);
 
       this.log.info(
-        `- ${displayName} [${device.iotId}] hidden=${hidden} poll=${pollInterval}s recordDays=${recordDays} ` +
-        `catPresentLatch=${catPresentLatchSeconds}s catVisitLatch=${catVisitLatchSeconds}s recentlyUsed=${recentlyUsedMinutes}m ` +
+        `- ${displayName} [${device.iotId}] hidden=${hidden} profile=${override?.profile || 'none'} ` +
+        `poll=${resolved.pollInterval}s recordDays=${resolved.recordDays} ` +
+        `catPresentLatch=${resolved.catPresentLatchSeconds}s catVisitLatch=${resolved.catVisitLatchSeconds}s ` +
+        `recentlyUsed=${resolved.recentlyUsedMinutes}m ` +
         `features=${enabledFeatures.length > 0 ? enabledFeatures.join(', ') : 'core-only'}`,
       );
     }

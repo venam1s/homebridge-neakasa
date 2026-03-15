@@ -56,6 +56,212 @@
         "minimum": 0,
         "description": "How long the Recently Used sensor remains active after the last visit."
       },
+      "defaults": {
+        "title": "Global Defaults Layer",
+        "type": "object",
+        "default": {},
+        "additionalProperties": false,
+        "description": "Optional global defaults layer applied after top-level settings and before profiles/device overrides.",
+        "properties": {
+          "pollInterval": {
+            "title": "Poll Interval (seconds)",
+            "type": "integer",
+            "minimum": 30
+          },
+          "recordDays": {
+            "title": "Record History Days",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "catPresentLatchSeconds": {
+            "title": "Cat Present Latch (seconds)",
+            "type": "integer",
+            "minimum": 0
+          },
+          "catVisitLatchSeconds": {
+            "title": "Cat Visit Latch (seconds)",
+            "type": "integer",
+            "minimum": 0
+          },
+          "recentlyUsedMinutes": {
+            "title": "Recently Used Window (minutes)",
+            "type": "integer",
+            "minimum": 0
+          },
+          "showChildLock": {
+            "title": "Child Lock",
+            "type": "boolean"
+          },
+          "showAutoLevelClean": {
+            "title": "Sync Auto Level With Auto Clean",
+            "type": "boolean"
+          },
+          "showEmptyBin": {
+            "title": "Empty Bin Switch",
+            "type": "boolean"
+          },
+          "showAutoBury": {
+            "title": "Auto Bury Switch",
+            "type": "boolean"
+          },
+          "showAutoLevel": {
+            "title": "Auto Level Switch",
+            "type": "boolean"
+          },
+          "showSilentMode": {
+            "title": "Silent Mode Switch",
+            "type": "boolean"
+          },
+          "showUnstoppableCycle": {
+            "title": "Unstoppable Cycle Switch",
+            "type": "boolean"
+          },
+          "showAutoRecovery": {
+            "title": "Auto Recovery Switch",
+            "type": "boolean"
+          },
+          "showYoungCatMode": {
+            "title": "Young Cat Mode Switch",
+            "type": "boolean"
+          },
+          "showBinStateSensor": {
+            "title": "Bin State Sensor",
+            "type": "boolean"
+          },
+          "showWifiSensor": {
+            "title": "WiFi Signal Sensor",
+            "type": "boolean"
+          },
+          "showCatSensors": {
+            "title": "Cat Weight Sensors",
+            "type": "boolean"
+          },
+          "showCatVisitSensor": {
+            "title": "Cat Visit Sensor",
+            "type": "boolean"
+          },
+          "showRecentlyUsedSensor": {
+            "title": "Recently Used Sensor",
+            "type": "boolean"
+          },
+          "showSandLevelSensor": {
+            "title": "Sand Level Sensor",
+            "type": "boolean"
+          },
+          "showFaultSensor": {
+            "title": "Fault Sensor",
+            "type": "boolean"
+          },
+          "useImperialUnits": {
+            "title": "Use Imperial Units (lbs)",
+            "type": "boolean"
+          },
+          "features": {
+            "title": "Feature Overrides",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "showChildLock": { "title": "Child Lock", "type": "boolean" },
+              "showAutoLevelClean": { "title": "Sync Auto Level With Auto Clean", "type": "boolean" },
+              "showEmptyBin": { "title": "Empty Bin Switch", "type": "boolean" },
+              "showAutoBury": { "title": "Auto Bury Switch", "type": "boolean" },
+              "showAutoLevel": { "title": "Auto Level Switch", "type": "boolean" },
+              "showSilentMode": { "title": "Silent Mode Switch", "type": "boolean" },
+              "showUnstoppableCycle": { "title": "Unstoppable Cycle Switch", "type": "boolean" },
+              "showAutoRecovery": { "title": "Auto Recovery Switch", "type": "boolean" },
+              "showYoungCatMode": { "title": "Young Cat Mode Switch", "type": "boolean" },
+              "showBinStateSensor": { "title": "Bin State Sensor", "type": "boolean" },
+              "showWifiSensor": { "title": "WiFi Signal Sensor", "type": "boolean" },
+              "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
+              "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
+              "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
+              "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
+              "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
+              "useImperialUnits": { "title": "Use Imperial Units (lbs)", "type": "boolean" }
+            }
+          }
+        }
+      },
+      "profiles": {
+        "title": "Named Profiles",
+        "type": "object",
+        "default": {},
+        "description": "Optional named settings layers. Reference by name from deviceOverrides[].profile.",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pollInterval": {
+              "title": "Poll Interval (seconds)",
+              "type": "integer",
+              "minimum": 30
+            },
+            "recordDays": {
+              "title": "Record History Days",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "catPresentLatchSeconds": {
+              "title": "Cat Present Latch (seconds)",
+              "type": "integer",
+              "minimum": 0
+            },
+            "catVisitLatchSeconds": {
+              "title": "Cat Visit Latch (seconds)",
+              "type": "integer",
+              "minimum": 0
+            },
+            "recentlyUsedMinutes": {
+              "title": "Recently Used Window (minutes)",
+              "type": "integer",
+              "minimum": 0
+            },
+            "showChildLock": { "title": "Child Lock", "type": "boolean" },
+            "showAutoLevelClean": { "title": "Sync Auto Level With Auto Clean", "type": "boolean" },
+            "showEmptyBin": { "title": "Empty Bin Switch", "type": "boolean" },
+            "showAutoBury": { "title": "Auto Bury Switch", "type": "boolean" },
+            "showAutoLevel": { "title": "Auto Level Switch", "type": "boolean" },
+            "showSilentMode": { "title": "Silent Mode Switch", "type": "boolean" },
+            "showUnstoppableCycle": { "title": "Unstoppable Cycle Switch", "type": "boolean" },
+            "showAutoRecovery": { "title": "Auto Recovery Switch", "type": "boolean" },
+            "showYoungCatMode": { "title": "Young Cat Mode Switch", "type": "boolean" },
+            "showBinStateSensor": { "title": "Bin State Sensor", "type": "boolean" },
+            "showWifiSensor": { "title": "WiFi Signal Sensor", "type": "boolean" },
+            "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
+            "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
+            "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
+            "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
+            "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
+            "useImperialUnits": { "title": "Use Imperial Units (lbs)", "type": "boolean" },
+            "features": {
+              "title": "Feature Overrides",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "showChildLock": { "title": "Child Lock", "type": "boolean" },
+                "showAutoLevelClean": { "title": "Sync Auto Level With Auto Clean", "type": "boolean" },
+                "showEmptyBin": { "title": "Empty Bin Switch", "type": "boolean" },
+                "showAutoBury": { "title": "Auto Bury Switch", "type": "boolean" },
+                "showAutoLevel": { "title": "Auto Level Switch", "type": "boolean" },
+                "showSilentMode": { "title": "Silent Mode Switch", "type": "boolean" },
+                "showUnstoppableCycle": { "title": "Unstoppable Cycle Switch", "type": "boolean" },
+                "showAutoRecovery": { "title": "Auto Recovery Switch", "type": "boolean" },
+                "showYoungCatMode": { "title": "Young Cat Mode Switch", "type": "boolean" },
+                "showBinStateSensor": { "title": "Bin State Sensor", "type": "boolean" },
+                "showWifiSensor": { "title": "WiFi Signal Sensor", "type": "boolean" },
+                "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
+                "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
+                "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
+                "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
+                "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
+                "useImperialUnits": { "title": "Use Imperial Units (lbs)", "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
       "startupBehavior": {
         "title": "Startup Behavior",
         "type": "string",
@@ -202,6 +408,11 @@
               "title": "Name Override",
               "type": "string",
               "description": "Optional HomeKit display name override"
+            },
+            "profile": {
+              "title": "Profile Name",
+              "type": "string",
+              "description": "Optional profile name from the top-level profiles object"
             },
             "hidden": {
               "title": "Hide Accessory",
@@ -439,6 +650,14 @@
         {
           "key": "startupDelaySeconds",
           "flex": "1 1 50%"
+        },
+        {
+          "key": "defaults",
+          "flex": "1 1 100%"
+        },
+        {
+          "key": "profiles",
+          "flex": "1 1 100%"
         }
       ]
     },
@@ -490,6 +709,7 @@
           "items": [
             "deviceOverrides[].iotId",
             "deviceOverrides[].name",
+            "deviceOverrides[].profile",
             "deviceOverrides[].hidden",
             "deviceOverrides[].pollInterval",
             "deviceOverrides[].recordDays",

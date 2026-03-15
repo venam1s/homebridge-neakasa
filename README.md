@@ -111,6 +111,8 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "catPresentLatchSeconds": 240,
       "catVisitLatchSeconds": 90,
       "recentlyUsedMinutes": 15,
+      "defaults": {},
+      "profiles": {},
       "startupBehavior": "immediate",
       "startupDelaySeconds": 0,
       "deviceOverrides": [],
@@ -134,9 +136,11 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `catPresentLatchSeconds` | No | `240` | Keep `Cat Present` active for N seconds after `catLeft`; set `0` to disable latch |
 | `catVisitLatchSeconds` | No | `90` | How long `Cat Visit` stays active after a detected visit; set `0` to disable latch |
 | `recentlyUsedMinutes` | No | `15` | Time window for the `Recently Used` sensor; set `0` to disable |
+| `defaults` | No | `{}` | Optional global defaults layer applied after top-level settings |
+| `profiles` | No | `{}` | Optional named settings layers referenced by `deviceOverrides[].profile` |
 | `startupBehavior` | No | `"immediate"` | Startup refresh mode: `immediate` or `skipInitialUpdate` |
 | `startupDelaySeconds` | No | `0` | Delay initial refresh at startup (seconds) |
-| `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, hidden status, polling, and feature flags |
+| `deviceOverrides` | No | `[]` | Per-device overrides by `iotId` for name, optional profile, hidden status, polling, and feature flags |
 | `debug` | No | `false` | Enable debug logging |
 | `showChildLock` | No | `false` | Show Child Lock (Lock) |
 | `showAutoLevelClean` | No | `false` | Show Sync Auto Level With Auto Clean helper switch |
@@ -156,7 +160,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showFaultSensor` | No | `false` | Show Fault Alert sensor (Motion Sensor) |
 | `useImperialUnits` | No | `false` | Display cat weight in lbs instead of kg |
 
-### Per-Device Overrides Example
+### Multi-Device Profiles + Overrides Example
 
 ```json
 {
@@ -169,26 +173,49 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
   "catPresentLatchSeconds": 240,
   "catVisitLatchSeconds": 90,
   "recentlyUsedMinutes": 15,
+  "defaults": {
+    "showFaultSensor": true,
+    "showRecentlyUsedSensor": true
+  },
+  "profiles": {
+    "highTraffic": {
+      "pollInterval": 30,
+      "recordDays": 14,
+      "showCatSensors": true,
+      "showCatVisitSensor": true
+    },
+    "quietZone": {
+      "pollInterval": 90,
+      "showCatVisitSensor": false
+    }
+  },
   "startupBehavior": "immediate",
   "startupDelaySeconds": 5,
   "deviceOverrides": [
     {
       "iotId": "abcdef123456",
       "name": "Upstairs Litter Box",
+      "profile": "highTraffic",
       "hidden": false,
-      "pollInterval": 30,
-      "recordDays": 3,
-      "catPresentLatchSeconds": 240,
       "catVisitLatchSeconds": 120,
-      "recentlyUsedMinutes": 20,
-      "showFaultSensor": true,
-      "showCatVisitSensor": true,
-      "showWifiSensor": true,
+      "showWifiSensor": true
+    },
+    {
+      "iotId": "fedcba654321",
+      "name": "Guest Room Litter Box",
+      "profile": "quietZone",
       "showCatSensors": false
     }
   ]
 }
 ```
+
+Merge order for each device:
+1. Built-in defaults
+2. Top-level settings
+3. `defaults`
+4. `profiles[deviceOverrides[].profile]` (if set)
+5. Fields on that `deviceOverrides[]` entry
 
 ## HomeKit Automation Ideas
 

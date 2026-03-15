@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0] - 2026-03-14
+
+### Added
+- Test suite with Jest: encryption round-trip tests, config validation and merging tests, and accessory helper function tests.
+- GitHub Actions CI workflow running lint, build, and test on Node 18 and 20.
+
+### Fixed
+- Per-device error isolation: a failed reconnect attempt no longer halts polling for remaining devices in the same cycle.
+
+### Changed
+- Added `dist/` to `.gitignore` — compiled output is built on publish and should not be tracked in version control.
+- Documented app-level API credentials in `api.ts` to clarify they are vendor constants, not user secrets.
+
 ## [1.9.1] - 2026-03-08
 
 ### Fixed
