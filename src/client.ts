@@ -18,10 +18,17 @@ export interface IoTApiRequest {
   };
 }
 
+export interface IoTApiResponse {
+  code: number;
+  data: any;
+  message?: string;
+  id?: string;
+}
+
 export class IoTClient {
   private appKey: string;
   private appSecret: string;
-  private domain: string;
+  readonly domain: string;
   private axiosInstance: AxiosInstance;
 
   constructor(config: ClientConfig) {
@@ -45,15 +52,11 @@ export class IoTClient {
     return crypto.createHash('md5').update(content).digest('base64');
   }
 
-  private getSignature(
+  buildSignatureHeaders(
     method: string,
-    accept: string,
-    contentMD5: string,
-    contentType: string,
-    date: string,
     headers: Record<string, string>,
     pathname: string,
-  ): string {
+  ): Record<string, string> {
     const excludeHeaders = new Set([
       'x-ca-signature', 'x-ca-signature-headers', 'accept', 'content-md5',
       'content-type', 'date', 'host', 'user-agent', 'token',
@@ -61,23 +64,25 @@ export class IoTClient {
     const headerKeys = Object.keys(headers).filter(k => !excludeHeaders.has(k)).sort();
     const headerString = headerKeys.map(k => `${k}:${headers[k]}`).join('\n');
 
-    // Tell the server which headers are included in the signature
-    headers['x-ca-signature-headers'] = headerKeys.join(',');
-
     const stringToSign = [
       method,
-      accept,
-      contentMD5,
-      contentType,
-      date,
+      headers['accept'] || '',
+      headers['content-md5'] || '',
+      headers['content-type'] || '',
+      headers['date'] || '',
       headerString,
       pathname,
     ].join('\n');
 
-    return crypto.createHmac('sha256', this.appSecret).update(stringToSign).digest('base64');
+    const signature = crypto.createHmac('sha256', this.appSecret).update(stringToSign).digest('base64');
+
+    return {
+      'x-ca-signature-headers': headerKeys.join(','),
+      'x-ca-signature': signature,
+    };
   }
 
-  async doRequest(pathname: string, body: IoTApiRequest): Promise<any> {
+  async doRequest(pathname: string, body: IoTApiRequest): Promise<IoTApiResponse> {
     const nonce = body.id || this.getNonce();
     body.id = nonce;
 
@@ -96,8 +101,8 @@ export class IoTClient {
       'content-md5': contentMD5,
     };
 
-    const signature = this.getSignature('POST', headers['accept'], contentMD5, headers['content-type'], date, headers, pathname);
-    headers['x-ca-signature'] = signature;
+    const signatureHeaders = this.buildSignatureHeaders('POST', headers, pathname);
+    Object.assign(headers, signatureHeaders);
 
     try {
       const response = await this.axiosInstance.post(`https://${this.domain}${pathname}`, bodyString, { headers });
@@ -128,7 +133,7 @@ export class IoTClient {
     // Build form body
     const bodyItems: string[] = [];
     const bodyItemsForSignature: string[] = [];
-    
+
     for (const key of Object.keys(body)) {
       bodyItems.push(`${key}=${encodeURIComponent(JSON.stringify(body[key]))}`);
       bodyItemsForSignature.push(`${key}=${JSON.stringify(body[key])}`);

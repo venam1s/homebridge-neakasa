@@ -1,7 +1,7 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { NeakasaAccessory } from './accessory';
-import { NeakasaAPI } from './api';
+import { NeakasaAPI, NeakasaAPIError, NeakasaAuthError } from './api';
 import {
   NeakasaPlatformConfig,
   NeakasaDevice,
@@ -21,6 +21,8 @@ const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 const DEFAULT_CAT_VISIT_LATCH_SECONDS = 90;
 const DEFAULT_RECENTLY_USED_MINUTES = 15;
 const DEFAULT_STARTUP_BEHAVIOR: StartupBehavior = 'immediate';
+const MAX_CONSECUTIVE_FAILURES = 5;
+const BACKOFF_BASE_MULTIPLIER = 2;
 
 const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
   'showAutoLevelClean',
@@ -80,6 +82,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   private readonly deviceAccessories: Map<string, NeakasaAccessory> = new Map();
   private readonly devicePollIntervals: Map<string, number> = new Map();
   private readonly lastPolledAt: Map<string, number> = new Map();
+  private readonly consecutiveFailures: Map<string, number> = new Map();
   private pollRunInProgress = false;
   private pollRunQueued = false;
   private queuedPollForceAll = false;
@@ -266,8 +269,8 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     let reconnectAttempted = false;
 
     for (const [iotId, accessory] of this.deviceAccessories.entries()) {
-      const intervalSeconds = this.devicePollIntervals.get(iotId) || this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
-      const lastPolledAt = this.lastPolledAt.get(iotId) || 0;
+      const intervalSeconds = this.devicePollIntervals.get(iotId) ?? this.config.pollInterval ?? DEFAULT_POLL_INTERVAL_SECONDS;
+      const lastPolledAt = this.lastPolledAt.get(iotId) ?? 0;
 
       if (!forceAll && now - lastPolledAt < intervalSeconds * 1000) {
         continue;
@@ -278,8 +281,21 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       try {
         await this.updateDevice(iotId, accessory);
         updatedSuccessfully = true;
+        this.consecutiveFailures.set(iotId, 0);
       } catch (error) {
         this.log.error(`Failed to update device ${iotId}:`, error);
+
+        const failures = (this.consecutiveFailures.get(iotId) ?? 0) + 1;
+        this.consecutiveFailures.set(iotId, failures);
+
+        if (failures >= MAX_CONSECUTIVE_FAILURES) {
+          const backoffMs = intervalSeconds * (BACKOFF_BASE_MULTIPLIER - 1) * 1000;
+          this.log.warn(
+            `Device ${iotId} has failed ${failures} consecutive polls; ` +
+            `backing off ${intervalSeconds * BACKOFF_BASE_MULTIPLIER}s before next attempt`,
+          );
+          this.lastPolledAt.set(iotId, Date.now() + backoffMs);
+        }
 
         // Try to reconnect if it's an auth error.
         if (this.isNotConnectedError(error)) {
@@ -295,6 +311,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
             this.log.info('Reconnected successfully, retrying device update...');
             await this.updateDevice(iotId, accessory);
             updatedSuccessfully = true;
+            this.consecutiveFailures.set(iotId, 0);
           } catch (reconnectError) {
             this.log.error('Failed to reconnect:', reconnectError);
             continue;
@@ -309,7 +326,13 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   }
 
   private isNotConnectedError(error: unknown): boolean {
-    return error instanceof Error && error.message.toLowerCase().includes('not connected');
+    if (error instanceof NeakasaAuthError) {
+      return true;
+    }
+    if (error instanceof NeakasaAPIError && !this.neakasaApi.connected) {
+      return true;
+    }
+    return false;
   }
 
   private async updateDevice(iotId: string, accessory: NeakasaAccessory): Promise<void> {
@@ -324,8 +347,8 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     if (shouldFetchRecords && deviceContext) {
       try {
         const records = await this.neakasaApi.getRecords(deviceContext.deviceName, this.getRecordDays(iotId));
-        catList = records.cat_list || [];
-        recordList = records.record_list || [];
+        catList = records.cat_list ?? [];
+        recordList = records.record_list ?? [];
       } catch (recordError) {
         this.log.debug(`Could not fetch records for ${deviceContext.deviceName}: ${recordError}`);
       }
@@ -341,13 +364,13 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       silentMode: properties.silentMode?.value === 1,
       autoForceInit: properties.autoForceInit?.value === 1,
       bIntrptRangeDet: properties.bIntrptRangeDet?.value === 1,
-      sandLevelPercent: properties.Sand?.value?.percent || 0,
-      wifiRssi: properties.NetWorkStatus?.value?.WiFi_RSSI || 0,
-      bucketStatus: properties.bucketStatus?.value || 0,
-      room_of_bin: properties.room_of_bin?.value || 0,
-      sandLevelState: properties.Sand?.value?.level || 0,
-      stayTime: properties.catLeft?.value?.stayTime || 0,
-      lastUse: properties.catLeft?.time || 0,
+      sandLevelPercent: properties.Sand?.value?.percent ?? 0,
+      wifiRssi: properties.NetWorkStatus?.value?.WiFi_RSSI ?? 0,
+      bucketStatus: properties.bucketStatus?.value ?? 0,
+      room_of_bin: properties.room_of_bin?.value ?? 0,
+      sandLevelState: properties.Sand?.value?.level ?? 0,
+      stayTime: properties.catLeft?.value?.stayTime ?? 0,
+      lastUse: properties.catLeft?.time ?? 0,
       cat_list: catList,
       record_list: recordList,
     };
@@ -357,7 +380,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
   private sanitizeConfig(rawConfig: NeakasaPlatformConfig): NeakasaPlatformConfig {
     const topLevelDefaults: ResolvedDeviceConfig = {
-      pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') || DEFAULT_POLL_INTERVAL_SECONDS,
+      pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') ?? DEFAULT_POLL_INTERVAL_SECONDS,
       recordDays: this.validateRecordDays(rawConfig.recordDays, 'recordDays') ?? DEFAULT_RECORD_DAYS,
       catPresentLatchSeconds:
         this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
@@ -740,7 +763,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   private getSchedulerTickSeconds(): number {
     const intervals = Array.from(this.devicePollIntervals.values());
     if (intervals.length === 0) {
-      return this.config.pollInterval || DEFAULT_POLL_INTERVAL_SECONDS;
+      return this.config.pollInterval ?? DEFAULT_POLL_INTERVAL_SECONDS;
     }
 
     return Math.min(...intervals);

@@ -37,6 +37,11 @@ export class NeakasaAPI {
   private oaApiGatewayEndpoint?: string;
   private apiGatewayEndpoint?: string;
 
+  // Reusable IoT client instances (one per domain)
+  private regionClient?: IoTClient;
+  private oaClient?: IoTClient;
+  private apiClient?: IoTClient;
+
   constructor(log: Logger) {
     this.log = log;
     this.axiosInstance = axios.create({ timeout: 30000 });
@@ -55,6 +60,34 @@ export class NeakasaAPI {
     return this.hmacSha256(this.appSecret, this.appKey + timestamp);
   }
 
+  private getOrCreateClient(domain: string, ref: 'regionClient' | 'oaClient' | 'apiClient'): IoTClient {
+    const existing = this[ref];
+    if (existing && existing.domain === domain) {
+      return existing;
+    }
+    const client = new IoTClient({
+      appKey: this.appKey,
+      appSecret: this.appSecret,
+      domain,
+    });
+    this[ref] = client;
+    return client;
+  }
+
+  private requireOaEndpoint(): string {
+    if (!this.oaApiGatewayEndpoint) {
+      throw new NeakasaAPIError('OA API gateway endpoint not loaded — call connect() first');
+    }
+    return this.oaApiGatewayEndpoint;
+  }
+
+  private requireAuthState(): { apiGatewayEndpoint: string; iotToken: string } {
+    if (!this.connected || !this.apiGatewayEndpoint || !this.iotToken) {
+      throw new NeakasaAPIError('API not connected');
+    }
+    return { apiGatewayEndpoint: this.apiGatewayEndpoint, iotToken: this.iotToken };
+  }
+
   async connect(username: string, password: string, firstRun: boolean = true): Promise<void> {
     if (!this.connected) {
       await this.loadBaseUrlByAccount(username);
@@ -63,9 +96,13 @@ export class NeakasaAPI {
       const vid = await this.getVid();
       this.sid = await this.getSidByVid(vid);
     }
-    
+
+    if (!this.sid) {
+      throw new NeakasaAuthError('SID not available — authentication incomplete');
+    }
+
     try {
-      this.iotToken = await this.getIotTokenBySid(this.sid!);
+      this.iotToken = await this.getIotTokenBySid(this.sid);
       this.connected = true;
       this.log.debug('Successfully connected to Neakasa API');
     } catch (error) {
@@ -145,11 +182,7 @@ export class NeakasaAPI {
   }
 
   private async loadRegionData(): Promise<void> {
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: 'cn-shanghai.api-iot.aliyuncs.com',
-    });
+    const client = this.getOrCreateClient('cn-shanghai.api-iot.aliyuncs.com', 'regionClient');
 
     const body = {
       version: '1.0',
@@ -165,7 +198,7 @@ export class NeakasaAPI {
 
     try {
       const response = await client.doRequest('/living/account/region/get', body);
-      
+
       if (response.code !== 200) {
         throw new NeakasaAPIError(`Failed to load region data: ${response.message}`);
       }
@@ -179,11 +212,8 @@ export class NeakasaAPI {
   }
 
   private async getVid(): Promise<string> {
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.oaApiGatewayEndpoint!,
-    });
+    const oaEndpoint = this.requireOaEndpoint();
+    const client = this.getOrCreateClient(oaEndpoint, 'oaClient');
 
     const body = {
       request: {
@@ -195,7 +225,7 @@ export class NeakasaAPI {
 
     try {
       const response = await client.doRequestRaw('/api/prd/connect.json', body);
-      
+
       if (response.success !== 'true' || response.data.successful !== 'true') {
         throw new NeakasaAPIError('Failed to get VID');
       }
@@ -207,11 +237,8 @@ export class NeakasaAPI {
   }
 
   private async getSidByVid(vid: string): Promise<string> {
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.oaApiGatewayEndpoint!,
-    });
+    const oaEndpoint = this.requireOaEndpoint();
+    const client = this.getOrCreateClient(oaEndpoint, 'oaClient');
 
     const body = {
       loginByOauthRequest: {
@@ -242,11 +269,10 @@ export class NeakasaAPI {
   }
 
   private async getIotTokenBySid(sid: string): Promise<string> {
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.apiGatewayEndpoint!,
-    });
+    if (!this.apiGatewayEndpoint) {
+      throw new NeakasaAPIError('API gateway endpoint not loaded — call connect() first');
+    }
+    const client = this.getOrCreateClient(this.apiGatewayEndpoint, 'apiClient');
 
     const body = {
       version: '1.0',
@@ -281,15 +307,8 @@ export class NeakasaAPI {
   }
 
   async getDevices(): Promise<NeakasaDevice[]> {
-    if (!this.connected) {
-      throw new NeakasaAPIError('API not connected');
-    }
-
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.apiGatewayEndpoint!,
-    });
+    const { apiGatewayEndpoint, iotToken } = this.requireAuthState();
+    const client = this.getOrCreateClient(apiGatewayEndpoint, 'apiClient');
 
     const body = {
       version: '1.0',
@@ -302,13 +321,13 @@ export class NeakasaAPI {
       request: {
         apiVer: '1.0.8',
         language: this.language,
-        iotToken: this.iotToken,
+        iotToken,
       },
     };
 
     try {
       const response = await client.doRequest('/uc/listBindingByAccount', body);
-      
+
       if (response.code !== 200) {
         throw new NeakasaAPIError(`Failed to get devices: ${response.message}`);
       }
@@ -320,15 +339,8 @@ export class NeakasaAPI {
   }
 
   async getDeviceProperties(iotId: string): Promise<DeviceProperties> {
-    if (!this.connected) {
-      throw new NeakasaAPIError('API not connected');
-    }
-
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.apiGatewayEndpoint!,
-    });
+    const { apiGatewayEndpoint, iotToken } = this.requireAuthState();
+    const client = this.getOrCreateClient(apiGatewayEndpoint, 'apiClient');
 
     const body = {
       version: '1.0',
@@ -336,13 +348,13 @@ export class NeakasaAPI {
       request: {
         apiVer: '1.0.4',
         language: this.language,
-        iotToken: this.iotToken,
+        iotToken,
       },
     };
 
     try {
       const response = await client.doRequest('/thing/properties/get', body);
-      
+
       if (response.code !== 200) {
         const message = typeof response.message === 'string' ? response.message : '';
         if (message.includes('identityId is blank')) {
@@ -358,15 +370,8 @@ export class NeakasaAPI {
   }
 
   async setDeviceProperties(iotId: string, items: Record<string, any>): Promise<void> {
-    if (!this.connected) {
-      throw new NeakasaAPIError('API not connected');
-    }
-
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.apiGatewayEndpoint!,
-    });
+    const { apiGatewayEndpoint, iotToken } = this.requireAuthState();
+    const client = this.getOrCreateClient(apiGatewayEndpoint, 'apiClient');
 
     const body = {
       version: '1.0',
@@ -374,13 +379,13 @@ export class NeakasaAPI {
       request: {
         apiVer: '1.0.4',
         language: this.language,
-        iotToken: this.iotToken,
+        iotToken,
       },
     };
 
     try {
       const response = await client.doRequest('/thing/properties/set', body);
-      
+
       if (response.code !== 200) {
         throw new NeakasaAPIError('Failed to set device properties');
       }
@@ -390,15 +395,8 @@ export class NeakasaAPI {
   }
 
   private async invokeService(iotId: string, identifier: string, args: Record<string, any>): Promise<void> {
-    if (!this.connected) {
-      throw new NeakasaAPIError('API not connected');
-    }
-
-    const client = new IoTClient({
-      appKey: this.appKey,
-      appSecret: this.appSecret,
-      domain: this.apiGatewayEndpoint!,
-    });
+    const { apiGatewayEndpoint, iotToken } = this.requireAuthState();
+    const client = this.getOrCreateClient(apiGatewayEndpoint, 'apiClient');
 
     const body = {
       version: '1.0',
@@ -406,13 +404,13 @@ export class NeakasaAPI {
       request: {
         apiVer: '1.0.5',
         language: this.language,
-        iotToken: this.iotToken,
+        iotToken,
       },
     };
 
     try {
       const response = await client.doRequest('/thing/service/invoke', body);
-      
+
       if (response.code !== 200) {
         throw new NeakasaAPIError('Failed to invoke service');
       }
