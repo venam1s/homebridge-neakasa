@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.10.3] - 2026-03-23
+## [1.10.4] - 2026-03-23
 
 ### Changed
 - Migrated from GitHub to GitLab: CI/CD now runs via GitLab CI pipelines.
