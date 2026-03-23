@@ -12,3 +12,9 @@ tmp/
 nodemon.json
 .claude/
 CLAUDE.md
+SCRATCHPAD.md
+TASK-QUEUE.md
+WORKING.md
+hipocampus.config.json
+memory/
+docs/
