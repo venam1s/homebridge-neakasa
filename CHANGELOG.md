@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Test suite with Jest: encryption round-trip tests, config validation and merging tests, and accessory helper function tests.
-- GitHub Actions CI workflow running lint, build, and test on Node 18 and 20.
+- GitLab CI pipeline running lint, build, and test on Node 18 and 20.
 
 ### Fixed
 - Per-device error isolation: a failed reconnect attempt no longer halts polling for remaining devices in the same cycle.
@@ -105,7 +105,7 @@ All notable changes to this project will be documented in this file.
 - **Child Lock as Lock** — converted from a Switch to a proper LockMechanism; displays as a lock icon in the Home app.
 - **Sand Level State sensor** — optional ContactSensor showing detailed litter level (Insufficient, Moderate, Sufficient, Overfilled).
 - Custom plugin icon displayed in Homebridge Config UI X.
-- GitHub Actions workflow for automated npm publishing on release.
+- GitLab CI pipeline for automated npm publishing on tag.
 - `package-lock.json` for reliable CI builds.
 
 ### Changed

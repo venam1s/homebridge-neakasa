@@ -11,3 +11,4 @@ output/
 tmp/
 nodemon.json
 .claude/
+CLAUDE.md
