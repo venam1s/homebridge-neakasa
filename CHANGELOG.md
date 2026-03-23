@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.3] - 2026-03-23
+
+### Changed
+- Migrated from GitHub to GitLab: CI/CD now runs via GitLab CI pipelines.
+- Updated all repository, homepage, issues, and icon URLs to GitLab.
+- Replaced GitHub Actions workflows with `.gitlab-ci.yml` (CI + publish stages).
+- Removed `.github/` directory (FUNDING.yml, Actions workflows).
+
 ## [1.10.0] - 2026-03-14
 
 ### Added
