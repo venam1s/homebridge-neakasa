@@ -5,19 +5,19 @@
   "description": "Homebridge plugin for Neakasa M1 Cat Litter Box — control and monitor your smart litter box from HomeKit",
   "license": "MIT",
   "author": "havuq",
-  "homepage": "https://gitlab.com/havuq/homebridge-neakasa#readme",
+  "homepage": "https://github.com/venam1s/homebridge-neakasa#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/havuq/homebridge-neakasa.git"
+    "url": "git+https://github.com/venam1s/homebridge-neakasa.git"
   },
   "bugs": {
-    "url": "https://gitlab.com/havuq/homebridge-neakasa/-/issues"
+    "url": "https://github.com/venam1s/homebridge-neakasa/issues"
   },
   "funding": {
     "type": "individual",
     "url": "https://buymeacoffee.com/havuq"
   },
-  "icon": "https://gitlab.com/havuq/homebridge-neakasa/-/raw/main/branding/icon.png",
+  "icon": "https://raw.githubusercontent.com/venam1s/homebridge-neakasa/main/branding/icon.png",
   "engines": {
     "node": ">=18.0.0",
     "homebridge": ">=1.6.0"

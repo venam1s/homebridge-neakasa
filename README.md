@@ -1,6 +1,6 @@
 # Homebridge Neakasa Plugin
 
-[![verified-by-homebridge](https://img.shields.io/badge/_-verified-blueviolet?color=%23491F59&style=flat&logoColor=%23FFFFFF&logo=homebridge)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins) [![npm version](https://badge.fury.io/js/homebridge-neakasa.svg)](https://badge.fury.io/js/homebridge-neakasa) [![pipeline status](https://gitlab.com/havuq/homebridge-neakasa/badges/main/pipeline.svg)](https://gitlab.com/havuq/homebridge-neakasa/-/commits/main) ![HomeKit](https://img.shields.io/badge/apple-homekit-black?logo=apple)
+[![npm version](https://badge.fury.io/js/homebridge-neakasa.svg)](https://badge.fury.io/js/homebridge-neakasa) [![CI](https://github.com/venam1s/homebridge-neakasa/actions/workflows/ci.yml/badge.svg)](https://github.com/venam1s/homebridge-neakasa/actions/workflows/ci.yml) ![HomeKit](https://img.shields.io/badge/apple-homekit-black?logo=apple)
 
 Homebridge plugin for the **Neakasa M1 Cat Litter Box**. Monitor and control your smart litter box through Apple HomeKit.
 
@@ -254,7 +254,7 @@ Merge order for each device:
 
 ```bash
 # Clone the repository
-git clone https://gitlab.com/havuq/homebridge-neakasa.git
+git clone https://github.com/venam1s/homebridge-neakasa.git
 cd homebridge-neakasa
 
 # Install dependencies
@@ -285,8 +285,8 @@ MIT
 ## Support
 
 If you find this plugin helpful, please consider:
-- Starring the repository on GitLab
+- Starring the repository on GitHub
 - Reporting issues and bugs
 - Contributing improvements
 
-For issues and feature requests, please use the [GitLab Issues](https://gitlab.com/havuq/homebridge-neakasa/-/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/venam1s/homebridge-neakasa/issues) page.
