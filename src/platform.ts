@@ -194,6 +194,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
             this.deviceAccessories.delete(iotId);
             this.devicePollIntervals.delete(iotId);
             this.lastPolledAt.delete(iotId);
+            this.consecutiveFailures.delete(iotId);
           }
 
           const index = this.accessories.indexOf(accessory);
@@ -797,6 +798,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       this.deviceAccessories.delete(iotId);
       this.devicePollIntervals.delete(iotId);
       this.lastPolledAt.delete(iotId);
+      this.consecutiveFailures.delete(iotId);
       return;
     }
 
@@ -804,6 +806,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     this.deviceAccessories.delete(iotId);
     this.devicePollIntervals.delete(iotId);
     this.lastPolledAt.delete(iotId);
+    this.consecutiveFailures.delete(iotId);
 
     const index = this.accessories.indexOf(accessory);
     if (index > -1) {

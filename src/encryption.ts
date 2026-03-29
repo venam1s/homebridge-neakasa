@@ -22,11 +22,11 @@ export class APIEncryption {
 
   private pad(data: Buffer): Buffer {
     const blockSize = 16;
-    const padLen = blockSize - (data.length % blockSize);
-    if (padLen === 0 || padLen === blockSize) {
+    const remainder = data.length % blockSize;
+    if (remainder === 0) {
       return data;
     }
-    return Buffer.concat([data, Buffer.alloc(padLen, 0)]);
+    return Buffer.concat([data, Buffer.alloc(blockSize - remainder, 0)]);
   }
 
   private unpad(data: Buffer): Buffer {

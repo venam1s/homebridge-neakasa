@@ -88,7 +88,7 @@ export class NeakasaAPI {
     return { apiGatewayEndpoint: this.apiGatewayEndpoint, iotToken: this.iotToken };
   }
 
-  async connect(username: string, password: string, firstRun: boolean = true): Promise<void> {
+  async connect(username: string, password: string): Promise<void> {
     if (!this.connected) {
       await this.loadBaseUrlByAccount(username);
       await this.loadAuthTokens(username, password);
@@ -105,13 +105,19 @@ export class NeakasaAPI {
       this.iotToken = await this.getIotTokenBySid(this.sid);
       this.connected = true;
       this.log.debug('Successfully connected to Neakasa API');
-    } catch (error) {
-      if (firstRun) {
-        this.log.warn('First connection attempt failed, retrying...');
-        await this.connect(username, password, false);
-      } else {
-        throw error;
-      }
+    } catch {
+      // SID may have expired — re-authenticate fully and retry once
+      this.log.warn('First IoT token attempt failed, retrying full auth...');
+      this.connected = false;
+      this.sid = undefined;
+      await this.loadBaseUrlByAccount(username);
+      await this.loadAuthTokens(username, password);
+      await this.loadRegionData();
+      const vid = await this.getVid();
+      this.sid = await this.getSidByVid(vid);
+      this.iotToken = await this.getIotTokenBySid(this.sid);
+      this.connected = true;
+      this.log.debug('Successfully connected to Neakasa API on retry');
     }
   }
 
@@ -325,17 +331,13 @@ export class NeakasaAPI {
       },
     };
 
-    try {
-      const response = await client.doRequest('/uc/listBindingByAccount', body);
+    const response = await client.doRequest('/uc/listBindingByAccount', body);
 
-      if (response.code !== 200) {
-        throw new NeakasaAPIError(`Failed to get devices: ${response.message}`);
-      }
-
-      return response.data.data;
-    } catch (error: any) {
-      throw new NeakasaAPIError(`Failed to get devices: ${error.message}`);
+    if (response.code !== 200) {
+      throw new NeakasaAPIError(`Failed to get devices: ${response.message}`);
     }
+
+    return response.data.data;
   }
 
   async getDeviceProperties(iotId: string): Promise<DeviceProperties> {
@@ -352,21 +354,17 @@ export class NeakasaAPI {
       },
     };
 
-    try {
-      const response = await client.doRequest('/thing/properties/get', body);
+    const response = await client.doRequest('/thing/properties/get', body);
 
-      if (response.code !== 200) {
-        const message = typeof response.message === 'string' ? response.message : '';
-        if (message.includes('identityId is blank')) {
-          this.connected = false;
-        }
-        throw new NeakasaAPIError(`Failed to get device properties: ${message || 'unknown error'}`);
+    if (response.code !== 200) {
+      const message = typeof response.message === 'string' ? response.message : '';
+      if (message.includes('identityId is blank')) {
+        this.connected = false;
       }
-
-      return response.data;
-    } catch (error: any) {
-      throw new NeakasaAPIError(`Failed to get device properties: ${error.message}`);
+      throw new NeakasaAPIError(`Failed to get device properties: ${message || 'unknown error'}`);
     }
+
+    return response.data;
   }
 
   async setDeviceProperties(iotId: string, items: Record<string, any>): Promise<void> {
@@ -383,14 +381,10 @@ export class NeakasaAPI {
       },
     };
 
-    try {
-      const response = await client.doRequest('/thing/properties/set', body);
+    const response = await client.doRequest('/thing/properties/set', body);
 
-      if (response.code !== 200) {
-        throw new NeakasaAPIError('Failed to set device properties');
-      }
-    } catch (error: any) {
-      throw new NeakasaAPIError(`Failed to set device properties: ${error.message}`);
+    if (response.code !== 200) {
+      throw new NeakasaAPIError('Failed to set device properties');
     }
   }
 
@@ -408,14 +402,10 @@ export class NeakasaAPI {
       },
     };
 
-    try {
-      const response = await client.doRequest('/thing/service/invoke', body);
+    const response = await client.doRequest('/thing/service/invoke', body);
 
-      if (response.code !== 200) {
-        throw new NeakasaAPIError('Failed to invoke service');
-      }
-    } catch (error: any) {
-      throw new NeakasaAPIError(`Failed to invoke service: ${error.message}`);
+    if (response.code !== 200) {
+      throw new NeakasaAPIError('Failed to invoke service');
     }
   }
 
@@ -433,6 +423,7 @@ export class NeakasaAPI {
   }
 
   async getRecords(deviceName: string, recordDays: number = 7): Promise<RecordsResponse> {
+    this.requireAuthState();
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = this.getSignature(timestamp.toString());
     const startTime = timestamp - (recordDays * 24 * 60 * 60);
