@@ -1,6 +1,6 @@
 # Homebridge Neakasa Plugin
 
-[![npm version](https://badge.fury.io/js/homebridge-neakasa.svg)](https://badge.fury.io/js/homebridge-neakasa) [![CI](https://github.com/venam1s/homebridge-neakasa/actions/workflows/ci.yml/badge.svg)](https://github.com/venam1s/homebridge-neakasa/actions/workflows/ci.yml) ![HomeKit](https://img.shields.io/badge/apple-homekit-black?logo=apple)
+[![npm version](https://badge.fury.io/js/homebridge-neakasa.svg)](https://badge.fury.io/js/homebridge-neakasa) ![HomeKit](https://img.shields.io/badge/apple-homekit-black?logo=apple)
 
 Homebridge plugin for the **Neakasa M1 Cat Litter Box**. Monitor and control your smart litter box through Apple HomeKit.
 
