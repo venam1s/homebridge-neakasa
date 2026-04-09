@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.0] - 2026-04-09
+
+### Added
+- Accessory test suite (`test/accessory.test.ts`): 40 tests covering service creation, `updateData` state mapping, switch handlers, cat presence detection, empty bin confirmation flow, and all bucket statuses.
+- Device pagination in `getDevices()` — no longer limited to a single page of 100 devices.
+- `IoTClientError` typed error class in `client.ts` for distinguishable transport failures.
+- `generateRequestId()` helper using `crypto.randomUUID()` for proper request identification.
+
+### Fixed
+- `Request-Id` headers now use unique UUIDs instead of reusing the HMAC signature value.
+- `getDevices()` now wraps errors consistently in `NeakasaAPIError` (previously leaked raw axios errors).
+- Poll backoff now capped at 10 minutes (`MAX_BACKOFF_SECONDS = 600`) to prevent runaway intervals after prolonged device failures.
+- Removed dead `signature` variable in `getRecords()` after Request-Id fix.
+
+### Changed
+- Node engine requirement relaxed from `>=20.0.0` to `>=18.0.0` to match CI test matrix.
+- Homebridge engine range narrowed to `>=1.6.0 <3.0.0` to guard against breaking major version changes.
+
 ## [1.10.4] - 2026-03-23
 
 ### Changed

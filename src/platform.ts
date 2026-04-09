@@ -23,6 +23,7 @@ const DEFAULT_RECENTLY_USED_MINUTES = 15;
 const DEFAULT_STARTUP_BEHAVIOR: StartupBehavior = 'immediate';
 const MAX_CONSECUTIVE_FAILURES = 5;
 const BACKOFF_BASE_MULTIPLIER = 2;
+const MAX_BACKOFF_SECONDS = 600;
 
 const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
   'showAutoLevelClean',
@@ -290,10 +291,11 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         this.consecutiveFailures.set(iotId, failures);
 
         if (failures >= MAX_CONSECUTIVE_FAILURES) {
-          const backoffMs = intervalSeconds * (BACKOFF_BASE_MULTIPLIER - 1) * 1000;
+          const backoffSeconds = Math.min(intervalSeconds * BACKOFF_BASE_MULTIPLIER, MAX_BACKOFF_SECONDS);
+          const backoffMs = (backoffSeconds - intervalSeconds) * 1000;
           this.log.warn(
             `Device ${iotId} has failed ${failures} consecutive polls; ` +
-            `backing off ${intervalSeconds * BACKOFF_BASE_MULTIPLIER}s before next attempt`,
+            `backing off ${backoffSeconds}s before next attempt`,
           );
           this.lastPolledAt.set(iotId, Date.now() + backoffMs);
         }

@@ -18,3 +18,7 @@ WORKING.md
 hipocampus.config.json
 memory/
 docs/
+.claude/skills/
+.mcp.json
+.mcp/
+.planning/

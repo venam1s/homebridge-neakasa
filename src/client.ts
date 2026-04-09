@@ -25,6 +25,13 @@ export interface IoTApiResponse {
   id?: string;
 }
 
+export class IoTClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IoTClientError';
+  }
+}
+
 export class IoTClient {
   private appKey: string;
   private appSecret: string;
@@ -108,7 +115,7 @@ export class IoTClient {
       const response = await this.axiosInstance.post(`https://${this.domain}${pathname}`, bodyString, { headers });
       return response.data;
     } catch (error: any) {
-      throw new Error(`API request failed: ${error.message}`);
+      throw new IoTClientError(`API request failed: ${error.message}`);
     }
   }
 
@@ -162,7 +169,7 @@ export class IoTClient {
       const response = await this.axiosInstance.post(`https://${this.domain}${pathname}`, bodyString, { headers });
       return response.data;
     } catch (error: any) {
-      throw new Error(`API request failed: ${error.message}`);
+      throw new IoTClientError(`API request failed: ${error.message}`);
     }
   }
 }

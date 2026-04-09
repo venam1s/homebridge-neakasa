@@ -60,6 +60,10 @@ export class NeakasaAPI {
     return this.hmacSha256(this.appSecret, this.appKey + timestamp);
   }
 
+  private generateRequestId(): string {
+    return crypto.randomUUID();
+  }
+
   private getOrCreateClient(domain: string, ref: 'regionClient' | 'oaClient' | 'apiClient'): IoTClient {
     const existing = this[ref];
     if (existing && existing.domain === domain) {
@@ -130,7 +134,7 @@ export class NeakasaAPI {
       const response = await this.axiosInstance.get('https://global.genhigh.com/global/baseurl/account', {
         params: { account: accountHash },
         headers: {
-          'Request-Id': signature,
+          'Request-Id': this.generateRequestId(),
           'Appid': this.appKey,
           'Timestamp': timestamp,
           'Sign': signature,
@@ -165,7 +169,7 @@ export class NeakasaAPI {
         password: passwordHash,
       }, {
         headers: {
-          'Request-Id': signature,
+          'Request-Id': this.generateRequestId(),
           'Appid': this.appKey,
           'Timestamp': timestamp,
           'Sign': signature,
@@ -315,29 +319,48 @@ export class NeakasaAPI {
   async getDevices(): Promise<NeakasaDevice[]> {
     const { apiGatewayEndpoint, iotToken } = this.requireAuthState();
     const client = this.getOrCreateClient(apiGatewayEndpoint, 'apiClient');
+    const allDevices: NeakasaDevice[] = [];
+    const pageSize = 100;
+    let pageNo = 1;
+    let hasMore = true;
 
-    const body = {
-      version: '1.0',
-      params: {
-        pageSize: 100,
-        thingType: 'DEVICE',
-        nodeType: 'DEVICE',
-        pageNo: 1,
-      },
-      request: {
-        apiVer: '1.0.8',
-        language: this.language,
-        iotToken,
-      },
-    };
+    try {
+      while (hasMore) {
+        const body = {
+          version: '1.0',
+          params: {
+            pageSize,
+            thingType: 'DEVICE',
+            nodeType: 'DEVICE',
+            pageNo,
+          },
+          request: {
+            apiVer: '1.0.8',
+            language: this.language,
+            iotToken,
+          },
+        };
 
-    const response = await client.doRequest('/uc/listBindingByAccount', body);
+        const response = await client.doRequest('/uc/listBindingByAccount', body);
 
-    if (response.code !== 200) {
-      throw new NeakasaAPIError(`Failed to get devices: ${response.message}`);
+        if (response.code !== 200) {
+          throw new NeakasaAPIError(`Failed to get devices: ${response.message}`);
+        }
+
+        const devices: NeakasaDevice[] = response.data.data ?? [];
+        allDevices.push(...devices);
+
+        hasMore = devices.length >= pageSize;
+        pageNo++;
+      }
+
+      return allDevices;
+    } catch (error: any) {
+      if (error instanceof NeakasaAPIError) {
+        throw error;
+      }
+      throw new NeakasaAPIError(`Failed to get devices: ${error.message}`);
     }
-
-    return response.data.data;
   }
 
   async getDeviceProperties(iotId: string): Promise<DeviceProperties> {
@@ -425,7 +448,6 @@ export class NeakasaAPI {
   async getRecords(deviceName: string, recordDays: number = 7): Promise<RecordsResponse> {
     this.requireAuthState();
     const timestamp = Math.floor(Date.now() / 1000);
-    const signature = this.getSignature(timestamp.toString());
     const startTime = timestamp - (recordDays * 24 * 60 * 60);
 
     try {
@@ -438,7 +460,7 @@ export class NeakasaAPI {
           end_time: timestamp,
         },
         headers: {
-          'Request-Id': signature,
+          'Request-Id': this.generateRequestId(),
           'Token': this.encryption.getToken(),
           'Uid': this.encryption.uid,
           'Accept-Language': 'en',

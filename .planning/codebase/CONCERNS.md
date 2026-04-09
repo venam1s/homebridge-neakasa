@@ -1,179 +1,106 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-04-09
+**Analysis Date:** 2026-04-09 (verified against full source)
 
-## Critical Issues
+## Security
 
-**Git Repository Corruption:**
-- Issue: Repository has staged files in git index that do not exist on disk. Core source files (`src/platform.ts`, `src/api.ts`, `src/client.ts`, `src/encryption.ts`, `src/settings.ts`, `src/types.ts`, `src/accessory.ts`) and test files are missing from filesystem but appear as staged deletions in git status.
-- Files affected: `src/platform.ts`, `src/api.ts`, `src/client.ts`, `src/encryption.ts`, `src/settings.ts`, `src/types.ts`, `src/accessory.ts`, `test/accessory-helpers.test.ts`, `test/encryption.test.ts`, `test/platform-config.test.ts`
-- Impact: Cannot build or test project. npm build/lint/test will fail immediately. Git objects appear corrupted (cannot be read from index). Repository is non-functional.
-- Fix approach: This appears to be a result of the GitHub migration from havuq to venam1s account (documented in memory/2026-03-28.md). The GitLab repo at gitlab.com/havuq/homebridge-neakasa is documented as the source of truth. Current state: Either (1) recover files from GitLab and re-stage, or (2) reset git index and re-clone cleanly from GitHub source.
+**Hardcoded App Credentials:**
+- `src/api.ts:25-26` — `appKey` and `appSecret` are hardcoded. Comment correctly notes these are reverse-engineered from the Android APK and shared across all installations. Not user secrets, but a single point of failure if Neakasa rotates them — every installed version breaks with no user-side fix until a plugin release.
 
-**Sole Author Dependency:**
-- Issue: Project has a single author (havuq) per CLAUDE.md. The original GitHub account was suspended by GitHub Actions ToS violation (heavy Docker builds). Now migrated to venam1s account.
-- Files affected: All commits, package.json metadata, git history
-- Impact: Ongoing maintenance depends on single person. If venam1s account is compromised or suspended, plugin maintenance halts.
-- Fix approach: Document transition plan. Consider adding secondary maintainer with GitHub/npm publish access.
+**Hardcoded AES Key and IV:**
+- `src/encryption.ts:3-4` — Default AES key and IV are hardcoded constants used only for the initial `decodeLoginToken()` call. After login, the server-provided key/IV replace them (`encryption.ts:79-84`). This is a protocol requirement — the initial decode must use a shared secret.
 
-**Missing Node Version Management:**
-- Issue: No `.nvmrc` or `.node-version` file found. CLAUDE.md specifies CI runs on Node 18 + 20, but development environment has no version lock.
-- Files affected: Root directory (missing file)
-- Impact: Developers may use wrong Node version locally, causing build failures or incompatibilities not caught in local testing.
-- Fix approach: Add `.nvmrc` file pinning to Node 18 LTS or create `.node-version` file.
+**Static IV in AES-CBC Encryption:**
+- `src/encryption.ts:42` — `encrypt()` reuses `this.aesIv` for every call. Best practice is a random IV per encryption. Mitigated by the timestamp suffix in `getToken()` (`token@timestamp`) which ensures plaintext varies. This is a Neakasa protocol constraint, not a plugin defect.
 
-## Architecture Concerns
+**Custom Zero-Byte Padding:**
+- `src/encryption.ts:23-39` — Manual zero-byte padding instead of PKCS7. The `unpad()` strips trailing null bytes, which is ambiguous if plaintext ends in nulls. Safe for this use case (token strings) but non-standard. Matches Neakasa server expectations.
 
-**Complex Configuration Merge System:**
-- Issue: Config resolution has 5-tier precedence system: deviceOverrides[].fields > profiles[name] > defaults > top-level fields > built-in defaults (documented in CLAUDE.md). Single `sanitizeConfig()` function in `src/platform.ts` handles all merge logic.
-- Files affected: `src/platform.ts`, `src/settings.ts`
-- Impact: Configuration is hard to debug. Unclear which config value takes precedence without tracing all 5 layers. No clear error messages if config conflicts exist. Difficult to extend with new config options.
-- Fix approach: Refactor config resolution into smaller, testable functions. Add debug logging showing which tier provided final value. Add config validation tests covering edge cases.
+**MD5 Double-Hashing for Passwords:**
+- `src/api.ts:154` — `md5(md5(password))`. MD5 is cryptographically broken, but this matches the Neakasa API protocol. The plugin can't change it.
 
-**17+ Feature Flags with Dynamic Service Creation:**
-- Issue: Per CLAUDE.md, `NeakasaAccessory` creates/removes HomeKit services based on 17+ boolean feature flags (e.g. `showChildLock`, `showCatSensors`, `showWifiSensor`) plus dynamic cat weight sensors based on `cat_list` from device.
-- Files affected: `src/accessory.ts`
-- Impact: Service creation logic is likely complex and error-prone. Untested combinations of flags could cause crashes or missing HomeKit features. Hard to trace which flags control which services. Adding new sensors requires modifying multiple flag checks.
-- Fix approach: Create a service configuration registry mapping flags to services. Add comprehensive tests for flag combinations. Consider feature-gate library or service factory pattern.
+**Hardcoded Android Emulator Fingerprint:**
+- `src/api.ts:159-163` — Login sends hardcoded device identifiers: `system_version: 'Android14,SDK:34'`, `system_number: 'GOOGLE_sdk_gphone64_x86_64...'`, `app_version: '2.0.9'`. If Neakasa flags emulator fingerprints or checks app version, auth could fail. Also becomes stale as the real app updates past 2.0.9.
 
-**Multi-Stage Authentication Flow:**
-- Issue: Per CLAUDE.md, `NeakasaAPI` implements complex 6-stage auth: account hash → login → region → VID → SID → IoT token. Each stage can fail. No clear documentation of failure modes or recovery.
-- Files affected: `src/api.ts`, `src/client.ts`
-- Impact: Auth failures are hard to debug. No retry logic documented. If one stage times out or returns unexpected response, entire device discovery fails. Reconnection logic exists but unclear how it interacts with multi-stage auth.
-- Fix approach: Add explicit error types for each auth stage. Implement structured retry with exponential backoff. Log which auth stage failed. Add unit tests for each stage in isolation.
+**Debug Logging is Clean:**
+- Verified all `log.debug` calls in `src/api.ts`. None log tokens, passwords, SIDs, or secrets. Only status messages and domain URLs are logged.
 
-**Polling with Per-Device Intervals:**
-- Issue: Per CLAUDE.md, `NeakasaPlatform` orchestrates polling with "smart per-device intervals" and "reconnection logic". Implementation details not visible.
-- Files affected: `src/platform.ts`
-- Impact: Polling behavior is a black box. No visibility into interval selection algorithm, reconnection triggers, or rate limiting. Could cause DoS of Neakasa API or excessive CPU if intervals are misconfigured. Could miss device state changes if intervals are too long.
-- Fix approach: Document polling strategy explicitly. Add configurable min/max poll intervals. Add metrics/logging for poll frequency per device. Test with various network conditions.
+## Architecture
 
-## Test Coverage Gaps
+**5-Tier Config Merge:**
+- `src/platform.ts:382-436` — Config resolves: built-in defaults → top-level config → `defaults` layer → `profiles[name]` → `deviceOverrides[iotId]`. Implementation in `sanitizeConfig()` is thorough with validation at each layer (`validatePollInterval`, `validateRecordDays`, `validateNonNegativeInt`, etc.). Duplicate iotIds are caught. Invalid profiles warn and fall back.
+- This is well-implemented but inherently complex for users to reason about. Debug logging at startup (`logConfigStartupChecks` at line 817, `logDetectedDeviceSummary` at line 834) shows resolved config per device, which helps.
 
-**Missing Unit Tests for Core Modules:**
-- Issue: Only 3 test files exist: `test/accessory-helpers.test.ts`, `test/encryption.test.ts`, `test/platform-config.test.ts`. Core logic in `api.ts` and `client.ts` (auth flow, request signing, nonce generation) has no visible tests.
-- Files affected: `src/api.ts`, `src/client.ts`
-- Impact: Multi-stage auth flow and HMAC-SHA256 signing are untested. Regression in encryption or auth could go undetected. Changes to API client are risky.
-- Fix approach: Add unit tests for `NeakasaAPI` covering each auth stage, error cases, and token refresh. Add unit tests for `IoTClient` request signing with known test vectors. Aim for 80%+ coverage on api.ts and client.ts.
+**17 Feature Flags:**
+- `src/platform.ts:27-45` — Exactly 17 flags in `FEATURE_KEYS`. Service creation in `src/accessory.ts:49-224` is linear: each flag maps to one `addOptionalSwitch` or conditional block. The `addOptionalSwitch`/`removeServiceIfExists` pattern (line 242-262) cleanly handles toggle on/off. Not fragile — adding a new flag requires one new entry in `FEATURE_KEYS`, one `addOptionalSwitch` call, and one update handler.
 
-**No Integration Tests:**
-- Issue: Jest config targets only `test/*.test.ts`. No integration tests that verify full polling loop, device discovery, or HomeKit accessory lifecycle.
-- Files affected: `test/` directory
-- Impact: Changes to platform initialization, device discovery sequence, or service creation could break in production without test detection. Homebridge integration is not tested.
-- Fix approach: Add integration test suite running against mock Homebridge API and mock Neakasa API. Test device discovery → accessory creation → polling → characteristic updates.
+**6-Stage Auth Flow:**
+- `src/api.ts:91-121` — `connect()` runs: `loadBaseUrlByAccount` → `loadAuthTokens` → `loadRegionData` → `getVid` → `getSidByVid` → `getIotTokenBySid`. Has a single retry: if IoT token fails, full re-auth is attempted once. Error types are well-separated: `NeakasaAuthError` for credential issues, `NeakasaAPIError` for everything else. Solid implementation.
 
-**No E2E Tests:**
-- Issue: No E2E tests mentioned in CLAUDE.md or test directory.
-- Files affected: None (feature absent)
-- Impact: Real-world plugin behavior in actual Homebridge not tested. HomeKit UI interaction not tested. Multi-device scenarios not tested.
-- Fix approach: Consider E2E tests against real Homebridge instance post-verification. For now, ensure robust mocking in integration tests.
+**Polling System:**
+- `src/platform.ts:216-327` — Per-device intervals, consecutive failure tracking with backoff after 5 failures (`MAX_CONSECUTIVE_FAILURES`), queue coalescing via `enqueuePollRun`/`flushQueuedPollRuns` to prevent concurrent poll cycles, and auto-reconnect on auth errors (once per poll run). Well-designed. No maximum backoff cap — after 5 failures, the interval doubles indefinitely.
 
-## Security Considerations
+**Two Signing Code Paths in IoTClient:**
+- `src/client.ts:55-83` (`buildSignatureHeaders` in `doRequest`) vs `src/client.ts:115-159` (manual signing in `doRequestRaw`). Different API endpoints require different signing schemes (JSON body vs form-encoded). Both work correctly but are maintained independently — a signing change would need updating in two places.
 
-**API Token Encryption:**
-- Issue: Per CLAUDE.md, `encryption.ts` handles "AES-128-CBC encryption for API token handling". No details on key management, IV generation, or rotation.
-- Files affected: `src/encryption.ts`
-- Current mitigation: Encryption present
-- Risk: If IV is reused or key is leaked, tokens could be decrypted. Weak key derivation from credentials could make tokens vulnerable.
-- Recommendations: Document IV generation (must be random per encryption). Use strong key derivation (PBKDF2 or Argon2) if key derived from credentials. Add entropy validation in tests. Consider rotating tokens periodically.
+## Code Quality
 
-**HMAC Request Signing:**
-- Issue: Per CLAUDE.md, `IoTClient` uses "HMAC-SHA256 request signing" with "nonce/timestamp management". No details on nonce collision prevention, timestamp window, or replay attack mitigation.
-- Files affected: `src/client.ts`
-- Current mitigation: HMAC + nonce + timestamp present
-- Risk: If timestamp window is too large (e.g., 1 hour), replay attacks are possible. If nonce generation is weak or reused, same signature can be replayed. No mention of SID/token rotation.
-- Recommendations: Add unit tests verifying nonce never repeats within a session. Set conservative timestamp window (e.g., 30 seconds). Document nonce/timestamp requirements. Consider adding request sequence counter as additional protection.
+**Inconsistent Error Wrapping:**
+- `src/api.ts:334` — `getDevices()` doesn't wrap errors. Raw axios errors propagate to the caller, unlike other methods that wrap in `NeakasaAPIError`.
+- `src/client.ts:110-112, 164-166` — Both `doRequest` and `doRequestRaw` catch errors and wrap them in plain `Error` instead of a typed error class. Upstream code in `api.ts` can't distinguish client transport failures from other errors.
 
-**Configuration Secrets:**
-- Issue: No mention of how API credentials, device tokens, or secrets are stored. `.env` file structure not documented.
-- Files affected: `src/settings.ts`
-- Current mitigation: Unknown
-- Risk: If credentials are logged, hardcoded, or stored plaintext in Homebridge config, they could leak. No mention of credential rotation.
-- Recommendations: Document credential storage. Recommend `~/.homebridge/config.json` is not world-readable (already best practice for Homebridge). Avoid logging credentials even in debug mode. Consider env var override for each secret.
+**Request-Id Header Reuses Signature:**
+- `src/api.ts:133` — `'Request-Id': signature` uses the HMAC signature as the request ID. A request ID should be a unique identifier (UUID/nonce). If the API ever validates Request-Id uniqueness, requests with identical timestamps would collide. Same pattern at `api.ts:166`.
 
-## Dependencies at Risk
+**Cat Weight Display Capped at 100:**
+- `src/accessory.ts:612` — Cat weight is displayed via `HumiditySensor` (0-100% range). `Math.min(100, ...)` caps display at 100. A 10kg cat shows as 10 (or 22 in imperial). But this means a 50kg value would show as 50% humidity — potentially confusing. The HumiditySensor hack is a HomeKit limitation (no generic numeric sensor type).
 
-**Homebridge API Dependency:**
-- Package: `homebridge` (version not visible)
-- Risk: Plugin is tightly coupled to Homebridge `DynamicPlatformPlugin` API. If Homebridge changes plugin API significantly (major version bump), entire plugin may break.
-- Impact: New Homebridge versions could be incompatible without plugin updates.
-- Mitigation: Package.json should pin Homebridge major version (e.g., `^4.3.0`). Monitor Homebridge release notes.
+## Test Coverage
 
-**Node.js HMAC/AES Libraries:**
-- Risk: Using Node.js built-in `crypto` module is safe, but if code directly uses deprecated APIs (e.g., `crypto.Cipher` without `createCipheriv`), Node.js version bumps could break plugin.
-- Impact: Node 22+ may deprecate unsafe crypto APIs.
-- Mitigation: Ensure code uses `createCipheriv` / `createHmac` (safe APIs). Add Node 22 to CI test matrix eventually.
+**5 test files, 81 tests passing:**
+- `test/accessory-helpers.test.ts` — Accessory helper utilities
+- `test/api.test.ts` — API auth flow and device operations
+- `test/client.test.ts` — IoT client request signing
+- `test/encryption.test.ts` — AES encryption/decryption
+- `test/platform-config.test.ts` — Config validation and merge logic
 
-## Scaling Limits
+**Gaps:**
+- No tests for `src/accessory.ts` service creation or `updateData()` logic
+- No integration tests (full polling loop, device discovery lifecycle)
+- No E2E tests against a real Homebridge instance
 
-**Device Discovery at Startup:**
-- Issue: Per CLAUDE.md, platform discovers devices "via API" at startup. If user has many Neakasa devices (e.g., 20+), discovery could time out or fail.
-- Files affected: `src/platform.ts`, `src/api.ts`
-- Current capacity: Unknown (not documented)
-- Limit: Likely hits API rate limits or socket timeout if discovering 10+ devices sequentially.
-- Scaling path: Implement parallel device fetches with concurrency limit. Add pagination if API supports it. Cache device list with TTL.
+## Configuration
+
+**Config UI Exists and is Complete:**
+- `config.schema.json` (751 lines) provides a full Homebridge UI X form with layout sections for credentials, timing, optional switches, optional sensors, per-device overrides, profiles, and defaults. All 17 feature flags are exposed at every config tier. This is comprehensive — users do NOT need to edit JSON manually.
+
+## Dependencies
+
+**Homebridge Version:**
+- `package.json` — `"homebridge": ">=1.6.0"`. Minimum version pinned. No upper bound, so major Homebridge API changes could break the plugin without warning.
+
+**Node Version Mismatch:**
+- `package.json:22` — `"node": ">=20.0.0"` but CLAUDE.md states CI runs on Node 18 + 20. Either the engines field should be `>=18.0.0` to match CI, or CI shouldn't test Node 18 if it's not supported.
+
+**Axios:**
+- Only runtime dependency (`axios: ^1.6.0`). Both `src/api.ts:28` and `src/client.ts:38` create separate axios instances with 30s timeout. Functional but could share a factory.
+
+**Node.js Crypto:**
+- Uses stable APIs: `createCipheriv`, `createDecipheriv`, `createHmac`, `createHash`. No deprecated usage. Safe through Node 22+.
+
+## Scaling
+
+**Device Pagination:**
+- `src/api.ts:323` — `getDevices()` requests `pageSize: 100, pageNo: 1`. No pagination loop. If a user has 100+ devices (unlikely for cat litter boxes), extras would be silently missed.
 
 **Polling Overhead:**
-- Issue: Each device is polled on a per-device interval. If 10 devices are configured, that's 10 concurrent HTTP requests per poll cycle.
-- Files affected: `src/platform.ts`
-- Current capacity: Unknown
-- Limit: Could cause high CPU/network usage with 20+ devices or if poll interval is <30 seconds.
-- Scaling path: Implement request batching (fetch multiple device states in one request if API supports). Add configurable global poll interval cap. Add per-device rate limiting.
+- Each device polled individually via `getDeviceProperties()`. With `showCatSensors` enabled, each poll also calls `getRecords()` — doubling HTTP requests per device. Queue coalescing prevents stampedes.
 
-## Known Fragile Areas
+## Sole Author Risk
 
-**Configuration Validation:**
-- Files: `src/platform.ts` (sanitizeConfig)
-- Why fragile: 5-tier merge precedence is complex. Invalid config at any tier could silently be overridden. No clear error messages for config mistakes.
-- Safe modification: Add unit tests for sanitizeConfig covering all merge paths. Add explicit config schema validation (e.g., with `ajv` library). Log final resolved config at startup.
-- Test coverage: Config tests exist but likely incomplete (only `test/platform-config.test.ts`).
-
-**Feature Flag Service Creation:**
-- Files: `src/accessory.ts`
-- Why fragile: 17+ flags and dynamic cat sensors. Service creation happens per-accessory during initialization. If a flag check is wrong, services silently missing. If cat_list is malformed, service creation could crash.
-- Safe modification: Add service creation tests for each flag combination. Add null/undefined checks for cat_list. Log which services are created for each accessory.
-- Test coverage: No visible service creation tests in provided test file names.
-
-**Authentication Token Refresh:**
-- Files: `src/api.ts`
-- Why fragile: 6-stage auth with no clear recovery if one stage fails. Token refresh timing not documented. If token expires between refresh checks, next API call fails silently.
-- Safe modification: Add explicit error handling for each auth stage. Implement proactive token refresh before expiry (not just on error). Log token lifecycle events. Add retry logic with exponential backoff.
-- Test coverage: No auth stage tests visible.
-
-## Missing Critical Features
-
-**No Configuration UI:**
-- Problem: Users must edit `config.json` directly to configure 17+ feature flags, 3 profile layers, and device overrides. Complex merge precedence means users cannot easily reason about final config.
-- Blocks: Casual users cannot use plugin without understanding CLAUDE.md config documentation. User error rate likely high (wrong flags, invalid device IDs).
-- Recommendation: Add Homebridge UI plugin support (Dynamic Platform UI API) to expose config via web UI with visual form validation.
-
-**No Credential Rotation:**
-- Problem: API credentials are static. No documented way to refresh credentials without restarting plugin.
-- Blocks: If credentials are compromised, user must restart Homebridge to refresh them.
-- Recommendation: Implement periodic credential refresh without restart. Document credential update procedure.
-
-**No Metrics or Observability:**
-- Problem: No logging of poll frequency, auth failures, device discovery timing, or error rates. Users cannot diagnose performance issues.
-- Blocks: Plugin failures are silent. No way to verify polling is active.
-- Recommendation: Add debug logging (configurable level). Add metrics export (e.g., Prometheus format) for monitoring. Log at each polling cycle, auth stage, and error.
-
-## Build and Deployment Concerns
-
-**CI/CD Workflows:**
-- Issue: GitHub Actions workflows created during migration (per memory/2026-03-28.md). Lightweight approach to avoid ToS violations from previous Docker-heavy CI.
-- Impact: Workflows are new and untested. NPM publish workflow has no validation that published package is actually functional.
-- Recommendation: Verify workflows run successfully on first commit. Add npm publish smoke test (e.g., install package locally and require()). Add release notes generation.
-
-**No Pre-commit Hooks:**
-- Issue: ESLint configured with `--max-warnings=0` but no pre-commit hook to enforce linting before push.
-- Impact: Developers can commit linting violations, CI catches them, but code review cycle is longer.
-- Recommendation: Add `husky` + `lint-staged` to enforce linting on commit.
-
-**Missing CHANGELOG Updates:**
-- Issue: CHANGELOG.md exists but may not be auto-updated. No version bump guidance.
-- Impact: If npm publish workflow triggers on `release`, but CHANGELOG is outdated, version numbers mismatch.
-- Recommendation: Document semantic versioning scheme. Add guidance to update CHANGELOG before releases. Consider auto-generating CHANGELOG from commit messages (conventional commits).
+- Single author (havuq/venam1s). Original GitHub account suspended for Actions ToS violation. Now on venam1s account.
+- If account is compromised or suspended again, plugin maintenance halts and npm publish access is lost.
 
 ---
 
-*Concerns audit: 2026-04-09*
+*Verified against source: 2026-04-09*
