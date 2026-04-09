@@ -84,6 +84,7 @@ export interface NeakasaDevice {
   gmtCreate: number;
   gmtModified: number;
   status: string;
+  firmwareVersion?: string;
 }
 
 export interface DeviceProperties {

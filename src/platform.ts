@@ -137,6 +137,13 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       const devices = await this.neakasaApi.getDevices();
       this.log.info(`Found ${devices.length} device(s)`);
 
+      for (const device of devices) {
+        this.log.debug(
+          `Device: ${device.deviceName} [${device.iotId}] ` +
+          `product=${device.productKey} firmware=${device.firmwareVersion || 'unknown'}`,
+        );
+      }
+
       const activeIotIds = new Set<string>();
       const defaultDisplayName = this.config.deviceName || 'Neakasa M1';
 

@@ -26,10 +26,17 @@ export class NeakasaAccessory {
     this.config = config;
 
     // Set accessory information
-    this.accessory.getService(this.platform.Service.AccessoryInformation)!
+    const infoService = this.accessory.getService(this.platform.Service.AccessoryInformation)!;
+    infoService
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Neakasa')
       .setCharacteristic(this.platform.Characteristic.Model, 'M1')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, iotId);
+
+    const firmwareVersion = this.accessory.context.device?.firmwareVersion;
+    if (firmwareVersion) {
+      infoService.setCharacteristic(this.platform.Characteristic.FirmwareRevision, firmwareVersion);
+      this.platform.log.info(`${deviceName} firmware: ${firmwareVersion}`);
+    }
 
     this.setupServices();
   }
