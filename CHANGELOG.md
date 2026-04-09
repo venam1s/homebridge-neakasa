@@ -17,7 +17,6 @@ All notable changes to this project will be documented in this file.
 - Removed dead `signature` variable in `getRecords()` after Request-Id fix.
 
 ### Changed
-- Node engine requirement relaxed from `>=20.0.0` to `>=18.0.0` to match CI test matrix.
 - Homebridge engine range narrowed to `>=1.6.0 <3.0.0` to guard against breaking major version changes.
 
 ## [1.10.4] - 2026-03-23
