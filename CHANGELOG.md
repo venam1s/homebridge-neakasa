@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.12.0] - 2026-04-09
+
+### Added
+- Homebridge 2.0 compatibility — verified no deprecated APIs used, declared engine support.
+- Node.js 24 support added to CI matrix and engine field.
+- GitHub Actions updated to v5 for Node.js 24 runner compatibility.
+
+### Changed
+- Engine field updated to `"homebridge": "^1.6.0 || ^2.0.0-beta.0"` for Homebridge v2 readiness.
+- Node engine updated to `"^20.15.1 || ^22 || ^24"` matching Homebridge v2 requirements.
+- CI now tests on Node 20, 22, and 24.
+
 ## [1.11.0] - 2026-04-09
 
 ### Added
