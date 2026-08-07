@@ -235,7 +235,7 @@ export class NeakasaAccessory {
     }
 
     if (this.config.showCatSensors !== true) {
-      this.removeCatWeightServices();
+      this.removeStaleCatServices();
     }
   }
 
@@ -319,10 +319,11 @@ export class NeakasaAccessory {
     }
   }
 
-  private removeCatWeightServices(activeSubTypes?: Set<string>): void {
+  private removeStaleCatServices(activeSubTypes?: Set<string>): void {
+    const MANAGED_PREFIXES = ['cat-', 'catalert-', 'catvisits-'];
     const servicesToRemove = this.accessory.services.filter(service => {
       const subType = service.subtype;
-      if (!subType || !subType.startsWith('cat-')) {
+      if (!subType || !MANAGED_PREFIXES.some(p => subType.startsWith(p))) {
         return false;
       }
       if (subType === 'cat-present' || subType === 'cat-visit') {
@@ -589,7 +590,7 @@ export class NeakasaAccessory {
     if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
       this.updateCatSensors(data);
     } else {
-      this.removeCatWeightServices();
+      this.removeStaleCatServices();
     }
 
     if (this.previousData && data.lastUse > 0 && data.lastUse !== previousLastUse) {
@@ -647,7 +648,7 @@ export class NeakasaAccessory {
       }
     }
 
-    this.removeCatWeightServices(activeSubTypes);
+    this.removeStaleCatServices(activeSubTypes);
   }
 
   // Switch handlers

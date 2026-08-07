@@ -571,6 +571,18 @@ describe('NeakasaAccessory', () => {
       expect(accessory._serviceMap.has('cat-cat1')).toBe(false);
     });
 
+    it('sweeps stale catvisits- services for removed cats', async () => {
+      const { neakasaAccessory, accessory } = createAccessory({ showCatSensors: true });
+      // Simulate a stale per-cat sensor (e.g. from a future catalert-/catvisits- feature)
+      // left behind for a cat that is no longer present.
+      accessory.addService('OccupancySensor', 'Ghost Visits', 'catvisits-OLD');
+      expect(accessory._serviceMap.has('catvisits-OLD')).toBe(true);
+
+      await neakasaAccessory.updateData(createDeviceData({ cat_list: [], record_list: [] }));
+
+      expect(accessory._serviceMap.has('catvisits-OLD')).toBe(false);
+    });
+
     it('should update sand level state sensor name', async () => {
       const { neakasaAccessory, accessory } = createAccessory({ showSandLevelSensor: true });
       const data = createDeviceData({ sandLevelState: SandLevel.OVERFILLED });
