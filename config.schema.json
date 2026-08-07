@@ -184,6 +184,10 @@
             "title": "Cat Weight Alert",
             "type": "boolean"
           },
+          "showCatVisitCount": {
+            "title": "Cat Visits Today",
+            "type": "boolean"
+          },
           "showRecentlyUsedSensor": {
             "title": "Recently Used Sensor",
             "type": "boolean"
@@ -223,6 +227,7 @@
               "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
               "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
               "showCatWeightAlert": { "title": "Cat Weight Alert", "type": "boolean" },
+              "showCatVisitCount": { "title": "Cat Visits Today", "type": "boolean" },
               "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
               "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
               "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
@@ -298,6 +303,7 @@
             "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
             "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
             "showCatWeightAlert": { "title": "Cat Weight Alert", "type": "boolean" },
+            "showCatVisitCount": { "title": "Cat Visits Today", "type": "boolean" },
             "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
             "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
             "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
@@ -322,6 +328,7 @@
                 "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
                 "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
                 "showCatWeightAlert": { "title": "Cat Weight Alert", "type": "boolean" },
+                "showCatVisitCount": { "title": "Cat Visits Today", "type": "boolean" },
                 "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
                 "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
                 "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
@@ -440,6 +447,12 @@
         "type": "boolean",
         "default": false,
         "description": "Alerts when a cat's latest weight deviates from its recent average beyond Weight Alert Threshold. Shows as a Contact Sensor per cat in HomeKit — open means the alert is active. Needs at least 3 recorded visits."
+      },
+      "showCatVisitCount": {
+        "title": "Cat Visits Today",
+        "type": "boolean",
+        "default": false,
+        "description": "Tracks how many times each cat has used the box since local midnight. Shows as a Humidity Sensor per cat in HomeKit (value capped at 100)."
       },
       "showRecentlyUsedSensor": {
         "title": "Recently Used Sensor",
@@ -609,6 +622,10 @@
               "title": "Cat Weight Alert",
               "type": "boolean"
             },
+            "showCatVisitCount": {
+              "title": "Cat Visits Today",
+              "type": "boolean"
+            },
             "showRecentlyUsedSensor": {
               "title": "Recently Used Sensor",
               "type": "boolean"
@@ -689,6 +706,10 @@
                 },
                 "showCatWeightAlert": {
                   "title": "Cat Weight Alert",
+                  "type": "boolean"
+                },
+                "showCatVisitCount": {
+                  "title": "Cat Visits Today",
                   "type": "boolean"
                 },
                 "showRecentlyUsedSensor": {
@@ -824,6 +845,7 @@
         "showCatSensors",
         "showCatVisitSensor",
         "showCatWeightAlert",
+        "showCatVisitCount",
         "showRecentlyUsedSensor",
         "showSandLevelSensor",
         "showFaultSensor",
@@ -870,6 +892,7 @@
                 "deviceOverrides[].showCatSensors",
                 "deviceOverrides[].showCatVisitSensor",
                 "deviceOverrides[].showCatWeightAlert",
+                "deviceOverrides[].showCatVisitCount",
                 "deviceOverrides[].showRecentlyUsedSensor",
                 "deviceOverrides[].showSandLevelSensor",
                 "deviceOverrides[].showFaultSensor",

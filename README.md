@@ -91,6 +91,18 @@ Enable `showCatWeightAlert` to add a per-cat Contact Sensor ("`<cat>` Weight Ale
 
 > **Note:** `showCatWeightAlert` fetches cat records the same way `showCatSensors` does, so it works even if `showCatSensors` is left off.
 
+#### Cat Visits Today
+
+Enable `showCatVisitCount` to add a per-cat Humidity Sensor ("`<cat>` Visits Today") whose value is the number of recorded visits for that cat since local midnight (capped at 100). It resets naturally the next day once new visits start being recorded after midnight.
+
+```json
+{
+  "showCatVisitCount": true
+}
+```
+
+> **Note:** `showCatVisitCount` fetches cat records the same way `showCatSensors` and `showCatWeightAlert` do, so it works even if those are left off.
+
 ## Supported Devices
 
 - Neakasa M1 Cat Litter Box
@@ -179,6 +191,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showCatSensors` | No | `false` | Show per-cat weight sensors |
 | `showCatVisitSensor` | No | `false` | Show Cat Visit event sensor (Contact Sensor) |
 | `showCatWeightAlert` | No | `false` | Show per-cat Weight Alert sensor (Contact Sensor); open means the latest weight deviated beyond `weightAlertThreshold` |
+| `showCatVisitCount` | No | `false` | Show per-cat Visits Today sensor (Humidity Sensor); value is the cat's visit count since local midnight, capped at 100 |
 | `showRecentlyUsedSensor` | No | `false` | Show Recently Used sensor (Occupancy Sensor) |
 | `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
 | `showFaultSensor` | No | `false` | Show Fault Alert sensor (Motion Sensor) |

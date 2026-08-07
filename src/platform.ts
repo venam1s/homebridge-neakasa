@@ -43,6 +43,7 @@ const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
   'showCatSensors',
   'showCatVisitSensor',
   'showCatWeightAlert',
+  'showCatVisitCount',
   'showRecentlyUsedSensor',
   'showSandLevelSensor',
   'showFaultSensor',
@@ -65,6 +66,7 @@ const FEATURE_LABELS: Record<keyof FeatureVisibilityConfig, string> = {
   showCatSensors: 'Cat Weight Sensors',
   showCatVisitSensor: 'Cat Visit Sensor',
   showCatWeightAlert: 'Cat Weight Alert',
+  showCatVisitCount: 'Cat Visits Today',
   showRecentlyUsedSensor: 'Recently Used Sensor',
   showSandLevelSensor: 'Sand Level Sensor',
   showFaultSensor: 'Fault Sensor',
@@ -359,7 +361,9 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     const properties = await this.neakasaApi.getDeviceProperties(iotId);
 
     const featureConfig = this.getFeatureConfig(iotId);
-    const shouldFetchRecords = featureConfig.showCatSensors === true || featureConfig.showCatWeightAlert === true;
+    const shouldFetchRecords = featureConfig.showCatSensors === true ||
+      featureConfig.showCatWeightAlert === true ||
+      featureConfig.showCatVisitCount === true;
     const deviceContext = this.accessories.find(acc => acc.context.device?.iotId === iotId)?.context.device;
     let catList: any[] = [];
     let recordList: any[] = [];
@@ -452,6 +456,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       showCatSensors: effectiveDefaults.features.showCatSensors,
       showCatVisitSensor: effectiveDefaults.features.showCatVisitSensor,
       showCatWeightAlert: effectiveDefaults.features.showCatWeightAlert,
+      showCatVisitCount: effectiveDefaults.features.showCatVisitCount,
       showRecentlyUsedSensor: effectiveDefaults.features.showRecentlyUsedSensor,
       showSandLevelSensor: effectiveDefaults.features.showSandLevelSensor,
       showFaultSensor: effectiveDefaults.features.showFaultSensor,
@@ -567,6 +572,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       showCatSensors: false,
       showCatVisitSensor: false,
       showCatWeightAlert: false,
+      showCatVisitCount: false,
       showRecentlyUsedSensor: false,
       showSandLevelSensor: false,
       showFaultSensor: false,

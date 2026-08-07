@@ -1,6 +1,7 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { NeakasaPlatform } from './platform';
 import { DeviceData, CatRecord, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
+import { visitsToday } from './catStats';
 
 const FAULT_STATUSES = new Set([6, 7]); // Panels Missing, Interrupted
 const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
@@ -246,10 +247,10 @@ export class NeakasaAccessory {
   // no data yet to build a real activeSubTypes set from). The per-poll path in
   // updatePerCatSensors() checks each flag directly instead, since it also needs each flag to
   // gate its own sensor-building loop.
-  // Task 5 must add `|| this.config.showCatVisitCount === true` HERE, AND add a third
-  // `if (this.config.showCatVisitCount === true && hasCats) { ... }` block in updatePerCatSensors().
   private hasPerCatSensorsEnabled(): boolean {
-    return this.config.showCatSensors === true || this.config.showCatWeightAlert === true;
+    return this.config.showCatSensors === true ||
+      this.config.showCatWeightAlert === true ||
+      this.config.showCatVisitCount === true;
   }
 
   private addSwitch(
@@ -599,7 +600,7 @@ export class NeakasaAccessory {
       );
     }
 
-    // Optional: per-cat sensors (weight, weight alert; Task 5 adds visit count).
+    // Optional: per-cat sensors (weight, weight alert, visit count).
     // All per-cat sensor types add their subtypes into ONE shared set, then a single sweep
     // removes anything stale. Never call removeStaleCatServices separately per sensor type —
     // that would make the types delete each other's services on every poll.
@@ -619,8 +620,8 @@ export class NeakasaAccessory {
   }
 
   // Combined orchestrator for all per-cat sensor types. Builds ONE activeSubTypes set spanning
-  // every per-cat sensor kind (weight `cat-`, weight alert `catalert-`; Task 5 adds visit
-  // `catvisits-`), then sweeps once at the end. If every per-cat feature is disabled, no loop
+  // every per-cat sensor kind (weight `cat-`, weight alert `catalert-`, visit count `catvisits-`),
+  // then sweeps once at the end. If every per-cat feature is disabled, no loop
   // adds anything and the empty set removes all managed per-cat services.
   private updatePerCatSensors(data: DeviceData): void {
     const activeSubTypes = new Set<string>();
@@ -632,6 +633,10 @@ export class NeakasaAccessory {
 
     if (this.config.showCatWeightAlert === true && hasCats) {
       this.updateCatWeightAlertSensors(data, activeSubTypes);
+    }
+
+    if (this.config.showCatVisitCount === true && hasCats) {
+      this.updateCatVisitCountSensors(data, activeSubTypes);
     }
 
     this.removeStaleCatServices(activeSubTypes);
@@ -701,6 +706,23 @@ export class NeakasaAccessory {
           this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
           this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
       );
+    }
+  }
+
+  private updateCatVisitCountSensors(data: DeviceData, activeSubTypes: Set<string>): void {
+    for (const cat of data.cat_list) {
+      const subType = `catvisits-${cat.id}`;
+      activeSubTypes.add(subType);
+
+      let visitSensor = this.services.get(subType) || this.accessory.getService(subType);
+      if (!visitSensor) {
+        visitSensor = this.accessory.addService(this.platform.Service.HumiditySensor, `${cat.name} Visits Today`, subType);
+        this.setServiceName(visitSensor, `${cat.name} Visits Today`);
+      }
+      this.services.set(subType, visitSensor);
+
+      const count = visitsToday(data.record_list, cat.id, Date.now());
+      this.updateIfChanged(visitSensor, this.platform.Characteristic.CurrentRelativeHumidity, Math.min(100, count));
     }
   }
 

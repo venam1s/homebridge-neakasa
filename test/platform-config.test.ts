@@ -208,6 +208,18 @@ describe('NeakasaPlatform config sanitization', () => {
     });
   });
 
+  describe('showCatVisitCount', () => {
+    it('should default to false', () => {
+      const { platform } = createPlatform();
+      expect(getConfig(platform).showCatVisitCount).toBe(false);
+    });
+
+    it('should accept explicit true', () => {
+      const { platform } = createPlatform({ showCatVisitCount: true });
+      expect(getConfig(platform).showCatVisitCount).toBe(true);
+    });
+  });
+
   describe('startupBehavior', () => {
     it('should default to "immediate"', () => {
       const { platform } = createPlatform();
@@ -507,6 +519,29 @@ describe('NeakasaPlatform config merging', () => {
     expect(accessoryConfig.showCatWeightAlert).toBe(true);
   });
 
+  it('should resolve showCatVisitCount through the merge layers', () => {
+    const { platform } = createPlatform({
+      profiles: {
+        'tracked': { showCatVisitCount: true },
+      },
+      deviceOverrides: [
+        { iotId: 'device-1', profile: 'tracked' },
+      ],
+    });
+
+    // Top-level default applies when no override/profile exists
+    const fallback = (platform as any).getResolvedDeviceConfig('nonexistent-device');
+    expect(fallback.features.showCatVisitCount).toBe(false);
+
+    // Profile's showCatVisitCount (true) should apply via the deviceOverrides profile reference
+    const resolved = (platform as any).getResolvedDeviceConfig('device-1');
+    expect(resolved.features.showCatVisitCount).toBe(true);
+
+    // The accessory-facing config (built from the resolved config) carries it through too
+    const accessoryConfig = (platform as any).buildAccessoryConfig('device-1');
+    expect(accessoryConfig.showCatVisitCount).toBe(true);
+  });
+
   it('should resolve latestFirmwareVersion through precedence (deviceOverrides wins)', () => {
     const { platform } = createPlatform({
       latestFirmwareVersion: '1.0.0',
@@ -566,6 +601,32 @@ describe('NeakasaPlatform record fetching', () => {
 
   it('does not fetch records when both showCatSensors and showCatWeightAlert are off', async () => {
     const { platform } = createPlatform({ showCatSensors: false, showCatWeightAlert: false });
+    seedDevice(platform);
+    const { getRecords } = stubNeakasaApi(platform);
+    const mockAccessory = { updateData: jest.fn() };
+
+    await (platform as any).updateDevice('device-1', mockAccessory);
+
+    expect(getRecords).not.toHaveBeenCalled();
+  });
+
+  it('fetches records when showCatVisitCount is enabled even if other cat flags are off', async () => {
+    const { platform } = createPlatform({
+      showCatVisitCount: true,
+      showCatSensors: false,
+      showCatWeightAlert: false,
+    });
+    seedDevice(platform);
+    const { getRecords } = stubNeakasaApi(platform);
+    const mockAccessory = { updateData: jest.fn() };
+
+    await (platform as any).updateDevice('device-1', mockAccessory);
+
+    expect(getRecords).toHaveBeenCalledWith('Litter Box', 7);
+  });
+
+  it('does not fetch records when showCatSensors, showCatWeightAlert, and showCatVisitCount are all off', async () => {
+    const { platform } = createPlatform({ showCatSensors: false, showCatWeightAlert: false, showCatVisitCount: false });
     seedDevice(platform);
     const { getRecords } = stubNeakasaApi(platform);
     const mockAccessory = { updateData: jest.fn() };

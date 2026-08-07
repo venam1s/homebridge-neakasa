@@ -773,6 +773,126 @@ describe('NeakasaAccessory', () => {
     });
   });
 
+  describe('cat visits today sensor', () => {
+    it('creates a HumiditySensor with the visits-today count', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ showCatVisitCount: true });
+      const now = new Date('2026-08-07T10:00:00').getTime();
+      const midnight = Math.floor(new Date('2026-08-07T00:00:00').getTime() / 1000);
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list: [
+          { cat_id: 'A', weight: 4, start_time: midnight - 3600, end_time: midnight - 3600 }, // yesterday
+          { cat_id: 'A', weight: 4, start_time: midnight + 3600, end_time: midnight + 3600 }, // today
+          { cat_id: 'A', weight: 4, start_time: midnight + 7200, end_time: midnight + 7200 }, // today
+        ],
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      const svc = accessory._serviceMap.get('catvisits-A');
+      expect(svc).toBeDefined();
+      expect(svc.updateCharacteristic).toHaveBeenCalledWith(C.CurrentRelativeHumidity, 2);
+
+      (Date.now as jest.Mock).mockRestore();
+    });
+
+    it('caps the visits-today value at 100', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ showCatVisitCount: true });
+      const now = new Date('2026-08-07T10:00:00').getTime();
+      const midnight = Math.floor(new Date('2026-08-07T00:00:00').getTime() / 1000);
+      jest.spyOn(Date, 'now').mockReturnValue(now);
+
+      const record_list = Array.from({ length: 150 }, (_, i) => ({
+        cat_id: 'A',
+        weight: 4,
+        start_time: midnight + i,
+        end_time: midnight + i,
+      }));
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list,
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      const svc = accessory._serviceMap.get('catvisits-A');
+      expect(svc.updateCharacteristic).toHaveBeenCalledWith(C.CurrentRelativeHumidity, 100);
+
+      (Date.now as jest.Mock).mockRestore();
+    });
+
+    it('does not create a visits-today sensor when showCatVisitCount is disabled', async () => {
+      const { neakasaAccessory, accessory } = createAccessory({ showCatVisitCount: false });
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list: [{ cat_id: 'A', weight: 4, start_time: 1000, end_time: 1000 }],
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      expect(accessory._serviceMap.has('catvisits-A')).toBe(false);
+    });
+
+    it('keeps weight, alert, and visit sensors for the same cat across polls (combined sweep)', async () => {
+      const { neakasaAccessory, accessory } = createAccessory({
+        showCatSensors: true,
+        showCatWeightAlert: true,
+        showCatVisitCount: true,
+      });
+      const data = createDeviceData({
+        cat_list: [{ id: 'cat1', name: 'Whiskers' }],
+        record_list: [
+          { cat_id: 'cat1', weight: 4.0, start_time: 1000, end_time: 1000 },
+          { cat_id: 'cat1', weight: 4.0, start_time: 1001, end_time: 1001 },
+          { cat_id: 'cat1', weight: 4.0, start_time: 1002, end_time: 1002 },
+        ],
+      });
+
+      await neakasaAccessory.updateData(data);
+      expect(accessory._serviceMap.has('cat-cat1')).toBe(true);
+      expect(accessory._serviceMap.has('catalert-cat1')).toBe(true);
+      expect(accessory._serviceMap.has('catvisits-cat1')).toBe(true);
+
+      // A second poll must not have the three per-cat sensor types sweep each other away.
+      await neakasaAccessory.updateData(data);
+      expect(accessory._serviceMap.has('cat-cat1')).toBe(true);
+      expect(accessory._serviceMap.has('catalert-cat1')).toBe(true);
+      expect(accessory._serviceMap.has('catvisits-cat1')).toBe(true);
+    });
+
+    it('keeps cached per-cat visit services at construction when showCatVisitCount is on', () => {
+      const accessory = createMockAccessory();
+      // Simulate a service restored from the Homebridge cache; showCatSensors and
+      // showCatWeightAlert are off but showCatVisitCount alone must be enough to keep it.
+      accessory.addService('HumiditySensor', 'Milo Visits Today', 'catvisits-A');
+      expect(accessory._serviceMap.has('catvisits-A')).toBe(true);
+
+      const platform = createMockPlatform();
+      const config = createDefaultConfig({
+        showCatVisitCount: true,
+        showCatSensors: false,
+        showCatWeightAlert: false,
+      });
+      new NeakasaAccessory(platform as any, accessory as any, 'test-iot-id', 'Test Litter Box', config);
+
+      expect(accessory._serviceMap.has('catvisits-A')).toBe(true);
+    });
+
+    it('removes stale per-cat services at construction when all three cat features are disabled', () => {
+      const accessory = createMockAccessory();
+      accessory.addService('HumiditySensor', 'Ghost Visits Today', 'catvisits-OLD');
+      expect(accessory._serviceMap.has('catvisits-OLD')).toBe(true);
+
+      const platform = createMockPlatform();
+      const config = createDefaultConfig(); // all three cat features off
+      new NeakasaAccessory(platform as any, accessory as any, 'test-iot-id', 'Test Litter Box', config);
+
+      expect(accessory._serviceMap.has('catvisits-OLD')).toBe(false);
+    });
+  });
+
   describe('switch handlers', () => {
     it('should set auto clean via API', async () => {
       const { neakasaAccessory, platform } = createAccessory();

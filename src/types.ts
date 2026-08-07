@@ -19,6 +19,7 @@ export interface FeatureVisibilityConfig {
   showCatSensors: boolean;
   showCatVisitSensor: boolean;
   showCatWeightAlert: boolean;
+  showCatVisitCount: boolean;
   showRecentlyUsedSensor: boolean;
   showSandLevelSensor: boolean;
   showFaultSensor: boolean;
@@ -79,6 +80,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   showCatSensors?: boolean;
   showCatVisitSensor?: boolean;
   showCatWeightAlert?: boolean;
+  showCatVisitCount?: boolean;
   showRecentlyUsedSensor?: boolean;
   showSandLevelSensor?: boolean;
   // Unit preference
