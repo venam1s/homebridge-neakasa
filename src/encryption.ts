@@ -1,5 +1,12 @@
 import * as crypto from 'crypto';
 
+// IMPORTANT: The cipher (AES-128-CBC), the fixed default key/IV below, and the
+// zero-byte padding scheme (see pad/unpad) are dictated by the Neakasa cloud API
+// wire protocol — the server decrypts with exactly these parameters. Do NOT
+// "upgrade" this to AES-256, GCM, PKCS#7 padding, or a random IV: doing so will
+// break login token decryption and authentication will fail entirely. The
+// defaults are only used to decrypt the initial login token; the real per-session
+// key/IV are then taken from that token's payload (see decodeLoginToken).
 const AES_KEY_DEFAULT = Buffer.from('3J74PRUE5TKPJP32', 'utf-8');
 const AES_IV_DEFAULT = Buffer.from('QB8GC2X6WK39FF93', 'utf-8');
 
