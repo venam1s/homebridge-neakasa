@@ -21,6 +21,7 @@ const DEFAULT_RECORD_DAYS = 7;
 const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 const DEFAULT_CAT_VISIT_LATCH_SECONDS = 90;
 const DEFAULT_RECENTLY_USED_MINUTES = 15;
+const DEFAULT_WEIGHT_ALERT_THRESHOLD = 15;
 const DEFAULT_STARTUP_BEHAVIOR: StartupBehavior = 'immediate';
 const DEFAULT_LITTER_WARN_LEVEL: LitterWarnLevel = 'insufficient';
 const MAX_CONSECUTIVE_FAILURES = 5;
@@ -41,6 +42,7 @@ const FEATURE_KEYS: Array<keyof FeatureVisibilityConfig> = [
   'showWifiSensor',
   'showCatSensors',
   'showCatVisitSensor',
+  'showCatWeightAlert',
   'showRecentlyUsedSensor',
   'showSandLevelSensor',
   'showFaultSensor',
@@ -62,6 +64,7 @@ const FEATURE_LABELS: Record<keyof FeatureVisibilityConfig, string> = {
   showWifiSensor: 'WiFi Signal Sensor',
   showCatSensors: 'Cat Weight Sensors',
   showCatVisitSensor: 'Cat Visit Sensor',
+  showCatWeightAlert: 'Cat Weight Alert',
   showRecentlyUsedSensor: 'Recently Used Sensor',
   showSandLevelSensor: 'Sand Level Sensor',
   showFaultSensor: 'Fault Sensor',
@@ -77,6 +80,7 @@ interface ResolvedDeviceConfig {
   catPresentLatchSeconds: number;
   catVisitLatchSeconds: number;
   recentlyUsedMinutes: number;
+  weightAlertThreshold: number;
   features: FeatureVisibilityConfig;
 }
 
@@ -355,7 +359,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     const properties = await this.neakasaApi.getDeviceProperties(iotId);
 
     const featureConfig = this.getFeatureConfig(iotId);
-    const shouldFetchRecords = featureConfig.showCatSensors === true;
+    const shouldFetchRecords = featureConfig.showCatSensors === true || featureConfig.showCatWeightAlert === true;
     const deviceContext = this.accessories.find(acc => acc.context.device?.iotId === iotId)?.context.device;
     let catList: any[] = [];
     let recordList: any[] = [];
@@ -410,6 +414,9 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       recentlyUsedMinutes:
         this.validateNonNegativeInt(rawConfig.recentlyUsedMinutes, 'recentlyUsedMinutes') ??
         DEFAULT_RECENTLY_USED_MINUTES,
+      weightAlertThreshold:
+        this.validateNonNegativeInt(rawConfig.weightAlertThreshold, 'weightAlertThreshold') ??
+        DEFAULT_WEIGHT_ALERT_THRESHOLD,
       features: this.mergeFeatureConfig(this.createDefaultFeatureConfig(), rawConfig),
     };
 
@@ -428,6 +435,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       catPresentLatchSeconds: effectiveDefaults.catPresentLatchSeconds,
       catVisitLatchSeconds: effectiveDefaults.catVisitLatchSeconds,
       recentlyUsedMinutes: effectiveDefaults.recentlyUsedMinutes,
+      weightAlertThreshold: effectiveDefaults.weightAlertThreshold,
       startupBehavior: this.validateStartupBehavior(rawConfig.startupBehavior),
       startupDelaySeconds: this.validateStartupDelay(rawConfig.startupDelaySeconds),
       showAutoLevelClean: effectiveDefaults.features.showAutoLevelClean,
@@ -443,6 +451,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       showWifiSensor: effectiveDefaults.features.showWifiSensor,
       showCatSensors: effectiveDefaults.features.showCatSensors,
       showCatVisitSensor: effectiveDefaults.features.showCatVisitSensor,
+      showCatWeightAlert: effectiveDefaults.features.showCatWeightAlert,
       showRecentlyUsedSensor: effectiveDefaults.features.showRecentlyUsedSensor,
       showSandLevelSensor: effectiveDefaults.features.showSandLevelSensor,
       showFaultSensor: effectiveDefaults.features.showFaultSensor,
@@ -557,6 +566,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       showWifiSensor: false,
       showCatSensors: false,
       showCatVisitSensor: false,
+      showCatWeightAlert: false,
       showRecentlyUsedSensor: false,
       showSandLevelSensor: false,
       showFaultSensor: false,
@@ -615,6 +625,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     );
     const catVisitLatchSeconds = this.validateNonNegativeInt(layer.catVisitLatchSeconds, `${context}.catVisitLatchSeconds`);
     const recentlyUsedMinutes = this.validateNonNegativeInt(layer.recentlyUsedMinutes, `${context}.recentlyUsedMinutes`);
+    const weightAlertThreshold = this.validateNonNegativeInt(layer.weightAlertThreshold, `${context}.weightAlertThreshold`);
 
     if (pollInterval !== undefined) {
       normalized.pollInterval = pollInterval;
@@ -636,6 +647,9 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     }
     if (recentlyUsedMinutes !== undefined) {
       normalized.recentlyUsedMinutes = recentlyUsedMinutes;
+    }
+    if (weightAlertThreshold !== undefined) {
+      normalized.weightAlertThreshold = weightAlertThreshold;
     }
 
     const features = this.extractFeatureOverrides(layer);
@@ -725,6 +739,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         override.recentlyUsedMinutes,
         `deviceOverrides[${i}].recentlyUsedMinutes`,
       );
+      const weightAlertThreshold = this.validateNonNegativeInt(
+        override.weightAlertThreshold,
+        `deviceOverrides[${i}].weightAlertThreshold`,
+      );
       const profile = typeof override.profile === 'string' ? override.profile.trim() : '';
       if (profile && !knownProfiles.has(profile)) {
         this.log.warn(`deviceOverrides[${i}].profile "${profile}" was not found in profiles; using inherited defaults`);
@@ -744,6 +762,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         ...(catPresentLatchSeconds !== undefined ? { catPresentLatchSeconds } : {}),
         ...(catVisitLatchSeconds !== undefined ? { catVisitLatchSeconds } : {}),
         ...(recentlyUsedMinutes !== undefined ? { recentlyUsedMinutes } : {}),
+        ...(weightAlertThreshold !== undefined ? { weightAlertThreshold } : {}),
         ...(Object.keys(features).length > 0 ? { features } : {}),
       });
     }
@@ -794,6 +813,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       catPresentLatchSeconds: layer.catPresentLatchSeconds ?? base.catPresentLatchSeconds,
       catVisitLatchSeconds: layer.catVisitLatchSeconds ?? base.catVisitLatchSeconds,
       recentlyUsedMinutes: layer.recentlyUsedMinutes ?? base.recentlyUsedMinutes,
+      weightAlertThreshold: layer.weightAlertThreshold ?? base.weightAlertThreshold,
       features: this.mergeFeatureConfig(base.features, layer),
     };
   }
@@ -807,6 +827,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       catPresentLatchSeconds: this.config.catPresentLatchSeconds ?? DEFAULT_CAT_PRESENT_LATCH_SECONDS,
       catVisitLatchSeconds: this.config.catVisitLatchSeconds ?? DEFAULT_CAT_VISIT_LATCH_SECONDS,
       recentlyUsedMinutes: this.config.recentlyUsedMinutes ?? DEFAULT_RECENTLY_USED_MINUTES,
+      weightAlertThreshold: this.config.weightAlertThreshold ?? DEFAULT_WEIGHT_ALERT_THRESHOLD,
       features: this.mergeFeatureConfig(this.createDefaultFeatureConfig(), this.config),
     };
 
@@ -841,6 +862,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       catPresentLatchSeconds: resolvedConfig.catPresentLatchSeconds,
       catVisitLatchSeconds: resolvedConfig.catVisitLatchSeconds,
       recentlyUsedMinutes: resolvedConfig.recentlyUsedMinutes,
+      weightAlertThreshold: resolvedConfig.weightAlertThreshold,
     };
   }
 
@@ -879,7 +901,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       `Startup checks: pollInterval=${this.config.pollInterval}s, recordDays=${this.config.recordDays}, ` +
       `litterWarnLevel=${this.config.litterWarnLevel}, ` +
       `catPresentLatchSeconds=${this.config.catPresentLatchSeconds}s, catVisitLatchSeconds=${this.config.catVisitLatchSeconds}s, ` +
-      `recentlyUsedMinutes=${this.config.recentlyUsedMinutes}, ` +
+      `recentlyUsedMinutes=${this.config.recentlyUsedMinutes}, weightAlertThreshold=${this.config.weightAlertThreshold}%, ` +
       `startupBehavior=${this.config.startupBehavior}, startupDelaySeconds=${this.config.startupDelaySeconds}`,
     );
 
@@ -915,7 +937,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         `- ${displayName} [${device.iotId}] hidden=${hidden} profile=${override?.profile || 'none'} ` +
         `poll=${resolved.pollInterval}s recordDays=${resolved.recordDays} litterWarnLevel=${resolved.litterWarnLevel} ` +
         `catPresentLatch=${resolved.catPresentLatchSeconds}s catVisitLatch=${resolved.catVisitLatchSeconds}s ` +
-        `recentlyUsed=${resolved.recentlyUsedMinutes}m ` +
+        `recentlyUsed=${resolved.recentlyUsedMinutes}m weightAlertThreshold=${resolved.weightAlertThreshold}% ` +
         `features=${enabledFeatures.length > 0 ? enabledFeatures.join(', ') : 'core-only'}`,
       );
     }

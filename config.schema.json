@@ -71,6 +71,13 @@
         "minimum": 0,
         "description": "How long the Recently Used sensor remains active after the last visit."
       },
+      "weightAlertThreshold": {
+        "title": "Weight Alert Threshold (%)",
+        "type": "integer",
+        "default": 15,
+        "minimum": 1,
+        "description": "Percent deviation from a cat's recent average weight that trips the weight alert. Needs at least 3 recorded visits."
+      },
       "defaults": {
         "title": "Global Defaults Layer",
         "type": "object",
@@ -115,6 +122,11 @@
             "title": "Recently Used Window (minutes)",
             "type": "integer",
             "minimum": 0
+          },
+          "weightAlertThreshold": {
+            "title": "Weight Alert Threshold (%)",
+            "type": "integer",
+            "minimum": 1
           },
           "showChildLock": {
             "title": "Child Lock",
@@ -168,6 +180,10 @@
             "title": "Cat Visit Sensor",
             "type": "boolean"
           },
+          "showCatWeightAlert": {
+            "title": "Cat Weight Alert",
+            "type": "boolean"
+          },
           "showRecentlyUsedSensor": {
             "title": "Recently Used Sensor",
             "type": "boolean"
@@ -206,6 +222,7 @@
               "showWifiSensor": { "title": "WiFi Signal Sensor", "type": "boolean" },
               "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
               "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
+              "showCatWeightAlert": { "title": "Cat Weight Alert", "type": "boolean" },
               "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
               "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
               "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
@@ -262,6 +279,11 @@
               "type": "integer",
               "minimum": 0
             },
+            "weightAlertThreshold": {
+              "title": "Weight Alert Threshold (%)",
+              "type": "integer",
+              "minimum": 1
+            },
             "showChildLock": { "title": "Child Lock", "type": "boolean" },
             "showAutoLevelClean": { "title": "Sync Auto Level With Auto Clean", "type": "boolean" },
             "showEmptyBin": { "title": "Empty Bin Switch", "type": "boolean" },
@@ -275,6 +297,7 @@
             "showWifiSensor": { "title": "WiFi Signal Sensor", "type": "boolean" },
             "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
             "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
+            "showCatWeightAlert": { "title": "Cat Weight Alert", "type": "boolean" },
             "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
             "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
             "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
@@ -298,6 +321,7 @@
                 "showWifiSensor": { "title": "WiFi Signal Sensor", "type": "boolean" },
                 "showCatSensors": { "title": "Cat Weight Sensors", "type": "boolean" },
                 "showCatVisitSensor": { "title": "Cat Visit Sensor", "type": "boolean" },
+                "showCatWeightAlert": { "title": "Cat Weight Alert", "type": "boolean" },
                 "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
                 "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
                 "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
@@ -411,6 +435,12 @@
         "default": false,
         "description": "Adds a latched Contact Sensor that indicates a recent completed cat visit."
       },
+      "showCatWeightAlert": {
+        "title": "Cat Weight Alert",
+        "type": "boolean",
+        "default": false,
+        "description": "Alerts when a cat's latest weight deviates from its recent average beyond Weight Alert Threshold. Shows as a Contact Sensor per cat in HomeKit — open means the alert is active. Needs at least 3 recorded visits."
+      },
       "showRecentlyUsedSensor": {
         "title": "Recently Used Sensor",
         "type": "boolean",
@@ -517,6 +547,12 @@
               "minimum": 0,
               "description": "Override Recently Used window duration for this device."
             },
+            "weightAlertThreshold": {
+              "title": "Weight Alert Threshold (%)",
+              "type": "integer",
+              "minimum": 1,
+              "description": "Override the weight alert deviation threshold for this device."
+            },
             "showChildLock": {
               "title": "Child Lock",
               "type": "boolean"
@@ -567,6 +603,10 @@
             },
             "showCatVisitSensor": {
               "title": "Cat Visit Sensor",
+              "type": "boolean"
+            },
+            "showCatWeightAlert": {
+              "title": "Cat Weight Alert",
               "type": "boolean"
             },
             "showRecentlyUsedSensor": {
@@ -645,6 +685,10 @@
                 },
                 "showCatVisitSensor": {
                   "title": "Cat Visit Sensor",
+                  "type": "boolean"
+                },
+                "showCatWeightAlert": {
+                  "title": "Cat Weight Alert",
                   "type": "boolean"
                 },
                 "showRecentlyUsedSensor": {
@@ -730,6 +774,10 @@
           "flex": "1 1 50%"
         },
         {
+          "key": "weightAlertThreshold",
+          "flex": "1 1 50%"
+        },
+        {
           "key": "startupDelaySeconds",
           "flex": "1 1 50%"
         },
@@ -775,6 +823,7 @@
         "showWifiSensor",
         "showCatSensors",
         "showCatVisitSensor",
+        "showCatWeightAlert",
         "showRecentlyUsedSensor",
         "showSandLevelSensor",
         "showFaultSensor",
@@ -801,6 +850,7 @@
             "deviceOverrides[].catPresentLatchSeconds",
             "deviceOverrides[].catVisitLatchSeconds",
             "deviceOverrides[].recentlyUsedMinutes",
+            "deviceOverrides[].weightAlertThreshold",
             {
               "type": "fieldset",
               "title": "Feature Overrides",
@@ -819,6 +869,7 @@
                 "deviceOverrides[].showWifiSensor",
                 "deviceOverrides[].showCatSensors",
                 "deviceOverrides[].showCatVisitSensor",
+                "deviceOverrides[].showCatWeightAlert",
                 "deviceOverrides[].showRecentlyUsedSensor",
                 "deviceOverrides[].showSandLevelSensor",
                 "deviceOverrides[].showFaultSensor",

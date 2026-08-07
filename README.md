@@ -78,6 +78,19 @@ You can enable **Imperial Units** to display weights in **pounds** instead (e.g.
 }
 ```
 
+#### Cat Weight Alert
+
+Enable `showCatWeightAlert` to add a per-cat Contact Sensor ("`<cat>` Weight Alert") that opens when a cat's latest recorded weight deviates from the average of its prior visits by more than `weightAlertThreshold` percent (default `15`). The comparison always uses the raw kilogram values from the Neakasa API, regardless of `useImperialUnits`. At least 3 recorded visits are required before the sensor can trip — with fewer, it stays closed.
+
+```json
+{
+  "showCatWeightAlert": true,
+  "weightAlertThreshold": 15
+}
+```
+
+> **Note:** `showCatWeightAlert` fetches cat records the same way `showCatSensors` does, so it works even if `showCatSensors` is left off.
+
 ## Supported Devices
 
 - Neakasa M1 Cat Litter Box
@@ -117,6 +130,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "catPresentLatchSeconds": 240,
       "catVisitLatchSeconds": 90,
       "recentlyUsedMinutes": 15,
+      "weightAlertThreshold": 15,
       "defaults": {},
       "profiles": {},
       "startupBehavior": "immediate",
@@ -144,6 +158,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `catPresentLatchSeconds` | No | `240` | Keep `Cat Present` active for N seconds after `catLeft`; set `0` to disable latch |
 | `catVisitLatchSeconds` | No | `90` | How long `Cat Visit` stays active after a detected visit; set `0` to disable latch |
 | `recentlyUsedMinutes` | No | `15` | Time window for the `Recently Used` sensor; set `0` to disable |
+| `weightAlertThreshold` | No | `15` | Percent deviation from a cat's recent average weight that trips `Cat Weight Alert`; needs at least 3 recorded visits |
 | `defaults` | No | `{}` | Optional global defaults layer applied after top-level settings |
 | `profiles` | No | `{}` | Optional named settings layers referenced by `deviceOverrides[].profile` |
 | `startupBehavior` | No | `"immediate"` | Startup refresh mode: `immediate` or `skipInitialUpdate` |
@@ -163,6 +178,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `showWifiSensor` | No | `false` | Show WiFi Signal sensor |
 | `showCatSensors` | No | `false` | Show per-cat weight sensors |
 | `showCatVisitSensor` | No | `false` | Show Cat Visit event sensor (Contact Sensor) |
+| `showCatWeightAlert` | No | `false` | Show per-cat Weight Alert sensor (Contact Sensor); open means the latest weight deviated beyond `weightAlertThreshold` |
 | `showRecentlyUsedSensor` | No | `false` | Show Recently Used sensor (Occupancy Sensor) |
 | `showSandLevelSensor` | No | `false` | Show Sand Level State sensor |
 | `showFaultSensor` | No | `false` | Show Fault Alert sensor (Motion Sensor) |

@@ -18,6 +18,7 @@ export interface FeatureVisibilityConfig {
   showWifiSensor: boolean;
   showCatSensors: boolean;
   showCatVisitSensor: boolean;
+  showCatWeightAlert: boolean;
   showRecentlyUsedSensor: boolean;
   showSandLevelSensor: boolean;
   showFaultSensor: boolean;
@@ -33,6 +34,7 @@ export interface DeviceSettingsConfig extends Partial<FeatureVisibilityConfig> {
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;
+  weightAlertThreshold?: number;
   features?: Partial<FeatureVisibilityConfig>;
 }
 
@@ -53,6 +55,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;
+  weightAlertThreshold?: number;
   debug?: boolean;
   deviceName?: string;
   startupBehavior?: StartupBehavior;
@@ -75,6 +78,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   showWifiSensor?: boolean;
   showCatSensors?: boolean;
   showCatVisitSensor?: boolean;
+  showCatWeightAlert?: boolean;
   showRecentlyUsedSensor?: boolean;
   showSandLevelSensor?: boolean;
   // Unit preference

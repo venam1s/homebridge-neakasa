@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { NeakasaPlatform } from './platform';
-import { DeviceData, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
+import { DeviceData, CatRecord, SandLevel, SandLevelName, BucketStatus, BinState, NeakasaPlatformConfig } from './types';
 
 const FAULT_STATUSES = new Set([6, 7]); // Panels Missing, Interrupted
 const EMPTY_BIN_CONFIRM_WINDOW_MS = 10000;
@@ -8,6 +8,8 @@ const ACTION_SWITCH_RESET_MS = 150;
 const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 const DEFAULT_CAT_VISIT_LATCH_SECONDS = 90;
 const DEFAULT_RECENTLY_USED_MINUTES = 15;
+const DEFAULT_WEIGHT_ALERT_THRESHOLD = 15;
+const MIN_WEIGHT_SAMPLES = 3;
 
 export class NeakasaAccessory {
   private services: Map<string, Service> = new Map();
@@ -234,9 +236,20 @@ export class NeakasaAccessory {
       this.removeServiceIfExists('recently-used');
     }
 
-    if (this.config.showCatSensors !== true) {
+    if (!this.hasPerCatSensorsEnabled()) {
       this.removeStaleCatServices();
     }
+  }
+
+  // Used only at construction time, to decide whether to sweep stale cached per-cat services
+  // before the first poll happens (setupServices runs before any updateData call, so there is
+  // no data yet to build a real activeSubTypes set from). The per-poll path in
+  // updatePerCatSensors() checks each flag directly instead, since it also needs each flag to
+  // gate its own sensor-building loop.
+  // Task 5 must add `|| this.config.showCatVisitCount === true` HERE, AND add a third
+  // `if (this.config.showCatVisitCount === true && hasCats) { ... }` block in updatePerCatSensors().
+  private hasPerCatSensorsEnabled(): boolean {
+    return this.config.showCatSensors === true || this.config.showCatWeightAlert === true;
   }
 
   private addSwitch(
@@ -586,12 +599,11 @@ export class NeakasaAccessory {
       );
     }
 
-    // Optional: Cat Weight sensors
-    if (this.config.showCatSensors === true && data.cat_list && data.cat_list.length > 0) {
-      this.updateCatSensors(data);
-    } else {
-      this.removeStaleCatServices();
-    }
+    // Optional: per-cat sensors (weight, weight alert; Task 5 adds visit count).
+    // All per-cat sensor types add their subtypes into ONE shared set, then a single sweep
+    // removes anything stale. Never call removeStaleCatServices separately per sensor type —
+    // that would make the types delete each other's services on every poll.
+    this.updatePerCatSensors(data);
 
     if (this.previousData && data.lastUse > 0 && data.lastUse !== previousLastUse) {
       const stayText = this.formatStayTime(data.stayTime);
@@ -606,9 +618,26 @@ export class NeakasaAccessory {
     );
   }
 
-  private updateCatSensors(data: DeviceData): void {
+  // Combined orchestrator for all per-cat sensor types. Builds ONE activeSubTypes set spanning
+  // every per-cat sensor kind (weight `cat-`, weight alert `catalert-`; Task 5 adds visit
+  // `catvisits-`), then sweeps once at the end. If every per-cat feature is disabled, no loop
+  // adds anything and the empty set removes all managed per-cat services.
+  private updatePerCatSensors(data: DeviceData): void {
     const activeSubTypes = new Set<string>();
+    const hasCats = data.cat_list && data.cat_list.length > 0;
 
+    if (this.config.showCatSensors === true && hasCats) {
+      this.updateCatSensors(data, activeSubTypes);
+    }
+
+    if (this.config.showCatWeightAlert === true && hasCats) {
+      this.updateCatWeightAlertSensors(data, activeSubTypes);
+    }
+
+    this.removeStaleCatServices(activeSubTypes);
+  }
+
+  private updateCatSensors(data: DeviceData, activeSubTypes: Set<string>): void {
     for (const cat of data.cat_list) {
       const subType = `cat-${cat.id}`;
       activeSubTypes.add(subType);
@@ -647,8 +676,50 @@ export class NeakasaAccessory {
         catSensor.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, displayWeight);
       }
     }
+  }
 
-    this.removeStaleCatServices(activeSubTypes);
+  private updateCatWeightAlertSensors(data: DeviceData, activeSubTypes: Set<string>): void {
+    const threshold = this.config.weightAlertThreshold ?? DEFAULT_WEIGHT_ALERT_THRESHOLD;
+
+    for (const cat of data.cat_list) {
+      const subType = `catalert-${cat.id}`;
+      activeSubTypes.add(subType);
+
+      let alertSensor = this.services.get(subType) || this.accessory.getService(subType);
+      if (!alertSensor) {
+        alertSensor = this.accessory.addService(this.platform.Service.ContactSensor, `${cat.name} Weight Alert`, subType);
+        this.setServiceName(alertSensor, `${cat.name} Weight Alert`);
+      }
+      this.services.set(subType, alertSensor);
+
+      const catRecords = data.record_list.filter(r => r.cat_id === cat.id);
+      const alert = this.computeWeightAlert(catRecords, threshold);
+      this.updateIfChanged(
+        alertSensor,
+        this.platform.Characteristic.ContactSensorState,
+        alert ?
+          this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+          this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
+      );
+    }
+  }
+
+  private computeWeightAlert(records: CatRecord[], thresholdPct: number): boolean {
+    if (records.length < MIN_WEIGHT_SAMPLES) {
+      return false;
+    }
+
+    const sorted = [...records].sort((a, b) => b.end_time - a.end_time);
+    const latest = sorted[0].weight; // raw kg, never rounded/imperial-converted
+    const older = sorted.slice(1);
+    const baseline = older.reduce((sum, r) => sum + r.weight, 0) / older.length;
+
+    if (baseline <= 0) {
+      return false;
+    }
+
+    const deviationPct = Math.abs(latest - baseline) / baseline * 100;
+    return deviationPct > thresholdPct;
   }
 
   // Switch handlers

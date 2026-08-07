@@ -658,6 +658,121 @@ describe('NeakasaAccessory', () => {
     });
   });
 
+  describe('cat weight alert sensor', () => {
+    function catRecords(id: string, weights: number[]) {
+      // Ascending end_time — the LAST entry is the most recent (sort in the code picks it as latest).
+      return weights.map((w, i) => ({ cat_id: id, weight: w, start_time: 1000 + i, end_time: 1000 + i }));
+    }
+
+    it('opens weight alert when latest weight deviates beyond threshold', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ showCatWeightAlert: true });
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list: catRecords('A', [4.0, 4.0, 4.0, 3.0]), // baseline 4.0, latest 3.0 = 25% drop
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      const svc = accessory._serviceMap.get('catalert-A');
+      expect(svc.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_NOT_DETECTED,
+      );
+    });
+
+    it('keeps weight alert closed within threshold', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ showCatWeightAlert: true });
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list: catRecords('A', [4.0, 4.0, 4.0, 4.1]),
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      const svc = accessory._serviceMap.get('catalert-A');
+      expect(svc.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_DETECTED,
+      );
+    });
+
+    it('does not alert with fewer than 3 samples', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ showCatWeightAlert: true });
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list: catRecords('A', [4.0, 3.0]),
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      const svc = accessory._serviceMap.get('catalert-A');
+      expect(svc.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_DETECTED,
+      );
+    });
+
+    it('respects a custom weightAlertThreshold', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ showCatWeightAlert: true, weightAlertThreshold: 50 });
+      const data = createDeviceData({
+        cat_list: [{ id: 'A', name: 'Milo' }],
+        record_list: catRecords('A', [4.0, 4.0, 4.0, 3.0]), // 25% drop, below the 50% threshold
+      });
+
+      await neakasaAccessory.updateData(data);
+
+      const svc = accessory._serviceMap.get('catalert-A');
+      expect(svc.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_DETECTED,
+      );
+    });
+
+    it('keeps weight and alert sensors for the same cat across polls (combined sweep)', async () => {
+      const { neakasaAccessory, accessory } = createAccessory({ showCatSensors: true, showCatWeightAlert: true });
+      const data = createDeviceData({
+        cat_list: [{ id: 'cat1', name: 'Whiskers' }],
+        record_list: catRecords('cat1', [4.0, 4.0, 4.0]),
+      });
+
+      await neakasaAccessory.updateData(data);
+      expect(accessory._serviceMap.has('cat-cat1')).toBe(true);
+      expect(accessory._serviceMap.has('catalert-cat1')).toBe(true);
+
+      // A second poll must not have the two per-cat sensor types sweep each other away.
+      await neakasaAccessory.updateData(data);
+      expect(accessory._serviceMap.has('cat-cat1')).toBe(true);
+      expect(accessory._serviceMap.has('catalert-cat1')).toBe(true);
+    });
+
+    it('keeps cached per-cat alert services at construction when showCatWeightAlert is on', () => {
+      const accessory = createMockAccessory();
+      // Simulate a service restored from the Homebridge cache; showCatSensors is off but
+      // showCatWeightAlert alone must be enough to keep it (not sweep it before the first poll).
+      accessory.addService('ContactSensor', 'Milo Weight Alert', 'catalert-A');
+      expect(accessory._serviceMap.has('catalert-A')).toBe(true);
+
+      const platform = createMockPlatform();
+      const config = createDefaultConfig({ showCatWeightAlert: true, showCatSensors: false });
+      new NeakasaAccessory(platform as any, accessory as any, 'test-iot-id', 'Test Litter Box', config);
+
+      expect(accessory._serviceMap.has('catalert-A')).toBe(true);
+    });
+
+    it('removes stale per-cat services at construction when both cat features are disabled', () => {
+      const accessory = createMockAccessory();
+      // Simulate a service restored from the Homebridge cache for a feature that is now off.
+      accessory.addService('ContactSensor', 'Ghost Weight Alert', 'catalert-OLD');
+      expect(accessory._serviceMap.has('catalert-OLD')).toBe(true);
+
+      const platform = createMockPlatform();
+      const config = createDefaultConfig(); // showCatSensors and showCatWeightAlert both false
+      new NeakasaAccessory(platform as any, accessory as any, 'test-iot-id', 'Test Litter Box', config);
+
+      expect(accessory._serviceMap.has('catalert-OLD')).toBe(false);
+    });
+  });
+
   describe('switch handlers', () => {
     it('should set auto clean via API', async () => {
       const { neakasaAccessory, platform } = createAccessory();

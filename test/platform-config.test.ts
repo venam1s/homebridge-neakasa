@@ -178,6 +178,36 @@ describe('NeakasaPlatform config sanitization', () => {
     });
   });
 
+  describe('weightAlertThreshold', () => {
+    it('should use default (15) when not specified', () => {
+      const { platform } = createPlatform();
+      expect(getConfig(platform).weightAlertThreshold).toBe(15);
+    });
+
+    it('should accept a valid weightAlertThreshold', () => {
+      const { platform } = createPlatform({ weightAlertThreshold: 25 });
+      expect(getConfig(platform).weightAlertThreshold).toBe(25);
+    });
+
+    it('should warn and use default for negative values', () => {
+      const { platform, log } = createPlatform({ weightAlertThreshold: -5 });
+      expect(getConfig(platform).weightAlertThreshold).toBe(15);
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('weightAlertThreshold'));
+    });
+  });
+
+  describe('showCatWeightAlert', () => {
+    it('should default to false', () => {
+      const { platform } = createPlatform();
+      expect(getConfig(platform).showCatWeightAlert).toBe(false);
+    });
+
+    it('should accept explicit true', () => {
+      const { platform } = createPlatform({ showCatWeightAlert: true });
+      expect(getConfig(platform).showCatWeightAlert).toBe(true);
+    });
+  });
+
   describe('startupBehavior', () => {
     it('should default to "immediate"', () => {
       const { platform } = createPlatform();
@@ -448,6 +478,35 @@ describe('NeakasaPlatform config merging', () => {
     expect(accessoryConfig.litterWarnLevel).toBe('moderate');
   });
 
+  it('should resolve weightAlertThreshold and showCatWeightAlert through the merge layers', () => {
+    const { platform } = createPlatform({
+      weightAlertThreshold: 15,
+      defaults: {
+        weightAlertThreshold: 20,
+      },
+      profiles: {
+        'health': { showCatWeightAlert: true, weightAlertThreshold: 25 },
+      },
+      deviceOverrides: [
+        { iotId: 'device-1', profile: 'health', weightAlertThreshold: 30 },
+      ],
+    });
+
+    // Top-level default applies when no override/profile exists
+    const fallback = (platform as any).getResolvedDeviceConfig('nonexistent-device');
+    expect(fallback.weightAlertThreshold).toBe(20); // defaults layer wins over top-level
+
+    // deviceOverrides weightAlertThreshold wins over profile and defaults
+    const resolved = (platform as any).getResolvedDeviceConfig('device-1');
+    expect(resolved.weightAlertThreshold).toBe(30);
+    expect(resolved.features.showCatWeightAlert).toBe(true);
+
+    // The accessory-facing config (built from the resolved config) carries it through too
+    const accessoryConfig = (platform as any).buildAccessoryConfig('device-1');
+    expect(accessoryConfig.weightAlertThreshold).toBe(30);
+    expect(accessoryConfig.showCatWeightAlert).toBe(true);
+  });
+
   it('should resolve latestFirmwareVersion through precedence (deviceOverrides wins)', () => {
     const { platform } = createPlatform({
       latestFirmwareVersion: '1.0.0',
@@ -467,6 +526,53 @@ describe('NeakasaPlatform config merging', () => {
     // The accessory-facing config (built from the resolved config) carries it through too
     const accessoryConfig = (platform as any).buildAccessoryConfig('device-1');
     expect(accessoryConfig.latestFirmwareVersion).toBe('2.0.0');
+  });
+});
+
+describe('NeakasaPlatform record fetching', () => {
+  function seedDevice(platform: NeakasaPlatform) {
+    const device = {
+      iotId: 'device-1',
+      deviceName: 'Litter Box',
+      productKey: 'pk',
+      deviceSecret: 'secret',
+      gmtCreate: 0,
+      gmtModified: 0,
+      status: 'online',
+    };
+    (platform as any).accessories.push({ context: { device } });
+    return device;
+  }
+
+  function stubNeakasaApi(platform: NeakasaPlatform) {
+    const getRecords = jest.fn().mockResolvedValue({ cat_list: [], record_list: [] });
+    (platform as any).neakasaApi = {
+      getDeviceProperties: jest.fn().mockResolvedValue({}),
+      getRecords,
+    };
+    return { getRecords };
+  }
+
+  it('fetches records when showCatWeightAlert is enabled even if showCatSensors is off', async () => {
+    const { platform } = createPlatform({ showCatWeightAlert: true, showCatSensors: false });
+    seedDevice(platform);
+    const { getRecords } = stubNeakasaApi(platform);
+    const mockAccessory = { updateData: jest.fn() };
+
+    await (platform as any).updateDevice('device-1', mockAccessory);
+
+    expect(getRecords).toHaveBeenCalledWith('Litter Box', 7);
+  });
+
+  it('does not fetch records when both showCatSensors and showCatWeightAlert are off', async () => {
+    const { platform } = createPlatform({ showCatSensors: false, showCatWeightAlert: false });
+    seedDevice(platform);
+    const { getRecords } = stubNeakasaApi(platform);
+    const mockAccessory = { updateData: jest.fn() };
+
+    await (platform as any).updateDevice('device-1', mockAccessory);
+
+    expect(getRecords).not.toHaveBeenCalled();
   });
 });
 
