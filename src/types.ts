@@ -2,6 +2,8 @@ import { PlatformConfig } from 'homebridge';
 
 export type StartupBehavior = 'immediate' | 'skipInitialUpdate';
 
+export type LitterWarnLevel = 'insufficient' | 'moderate';
+
 export interface FeatureVisibilityConfig {
   showAutoLevelClean: boolean;
   showChildLock: boolean;
@@ -25,6 +27,7 @@ export interface FeatureVisibilityConfig {
 export interface DeviceSettingsConfig extends Partial<FeatureVisibilityConfig> {
   pollInterval?: number;
   recordDays?: number;
+  litterWarnLevel?: LitterWarnLevel;
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;
@@ -43,6 +46,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   password: string;
   pollInterval?: number;
   recordDays?: number;
+  litterWarnLevel?: LitterWarnLevel;
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;

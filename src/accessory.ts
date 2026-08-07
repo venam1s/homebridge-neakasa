@@ -412,7 +412,9 @@ export class NeakasaAccessory {
 
     // Core: Litter Level
     const filterService = this.services.get('filter')!;
-    const changeIndication = data.sandLevelState === SandLevel.INSUFFICIENT ?
+    const warnThreshold = this.config.litterWarnLevel === 'moderate' ?
+      SandLevel.MODERATE : SandLevel.INSUFFICIENT;
+    const changeIndication = data.sandLevelState <= warnThreshold ?
       this.platform.Characteristic.FilterChangeIndication.CHANGE_FILTER :
       this.platform.Characteristic.FilterChangeIndication.FILTER_OK;
     this.updateIfChanged(filterService, this.platform.Characteristic.FilterChangeIndication, changeIndication);

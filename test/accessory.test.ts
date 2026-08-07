@@ -318,6 +318,45 @@ describe('NeakasaAccessory', () => {
       );
     });
 
+    it('warns at MODERATE when litterWarnLevel is moderate', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ litterWarnLevel: 'moderate' });
+      const data = createDeviceData({ sandLevelState: SandLevel.MODERATE, sandLevelPercent: 40 });
+
+      await neakasaAccessory.updateData(data);
+
+      const filterService = accessory._serviceMap.get('sand-level')!;
+      expect(filterService.updateCharacteristic).toHaveBeenCalledWith(
+        C.FilterChangeIndication,
+        C.FilterChangeIndication.CHANGE_FILTER,
+      );
+    });
+
+    it('does not warn at MODERATE when litterWarnLevel is insufficient (default)', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory();
+      const data = createDeviceData({ sandLevelState: SandLevel.MODERATE, sandLevelPercent: 40 });
+
+      await neakasaAccessory.updateData(data);
+
+      const filterService = accessory._serviceMap.get('sand-level')!;
+      expect(filterService.updateCharacteristic).toHaveBeenCalledWith(
+        C.FilterChangeIndication,
+        C.FilterChangeIndication.FILTER_OK,
+      );
+    });
+
+    it('still warns at INSUFFICIENT when litterWarnLevel is moderate', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ litterWarnLevel: 'moderate' });
+      const data = createDeviceData({ sandLevelState: SandLevel.INSUFFICIENT });
+
+      await neakasaAccessory.updateData(data);
+
+      const filterService = accessory._serviceMap.get('sand-level')!;
+      expect(filterService.updateCharacteristic).toHaveBeenCalledWith(
+        C.FilterChangeIndication,
+        C.FilterChangeIndication.CHANGE_FILTER,
+      );
+    });
+
     it('should set status to active during cleaning', async () => {
       const { neakasaAccessory, accessory } = createAccessory();
       const data = createDeviceData({ bucketStatus: 1 }); // Cleaning

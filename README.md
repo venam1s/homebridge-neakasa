@@ -110,6 +110,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
       "password": "your_password",
       "pollInterval": 60,
       "recordDays": 7,
+      "litterWarnLevel": "insufficient",
       "catPresentLatchSeconds": 240,
       "catVisitLatchSeconds": 90,
       "recentlyUsedMinutes": 15,
@@ -135,6 +136,7 @@ Add the following to your Homebridge `config.json`, or use the Config UI setting
 | `deviceName` | No | `"Neakasa M1"` | Display name in HomeKit |
 | `pollInterval` | No | `60` | Update interval in seconds (min: 30) |
 | `recordDays` | No | `7` | Days of cat history to fetch for Cat Weight sensors (1-30) |
+| `litterWarnLevel` | No | `"insufficient"` | Litter level that triggers the `Change Filter` warning: `insufficient` or `moderate` |
 | `catPresentLatchSeconds` | No | `240` | Keep `Cat Present` active for N seconds after `catLeft`; set `0` to disable latch |
 | `catVisitLatchSeconds` | No | `90` | How long `Cat Visit` stays active after a detected visit; set `0` to disable latch |
 | `recentlyUsedMinutes` | No | `15` | Time window for the `Recently Used` sensor; set `0` to disable |

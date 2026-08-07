@@ -10,6 +10,7 @@ import {
   DeviceSettingsConfig,
   FeatureVisibilityConfig,
   StartupBehavior,
+  LitterWarnLevel,
 } from './types';
 
 const MIN_POLL_INTERVAL_SECONDS = 30;
@@ -21,6 +22,7 @@ const DEFAULT_CAT_PRESENT_LATCH_SECONDS = 240;
 const DEFAULT_CAT_VISIT_LATCH_SECONDS = 90;
 const DEFAULT_RECENTLY_USED_MINUTES = 15;
 const DEFAULT_STARTUP_BEHAVIOR: StartupBehavior = 'immediate';
+const DEFAULT_LITTER_WARN_LEVEL: LitterWarnLevel = 'insufficient';
 const MAX_CONSECUTIVE_FAILURES = 5;
 const BACKOFF_BASE_MULTIPLIER = 2;
 const MAX_BACKOFF_SECONDS = 600;
@@ -68,6 +70,7 @@ const FEATURE_LABELS: Record<keyof FeatureVisibilityConfig, string> = {
 interface ResolvedDeviceConfig {
   pollInterval: number;
   recordDays: number;
+  litterWarnLevel: LitterWarnLevel;
   catPresentLatchSeconds: number;
   catVisitLatchSeconds: number;
   recentlyUsedMinutes: number;
@@ -392,6 +395,8 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     const topLevelDefaults: ResolvedDeviceConfig = {
       pollInterval: this.validatePollInterval(rawConfig.pollInterval, 'pollInterval') ?? DEFAULT_POLL_INTERVAL_SECONDS,
       recordDays: this.validateRecordDays(rawConfig.recordDays, 'recordDays') ?? DEFAULT_RECORD_DAYS,
+      litterWarnLevel:
+        this.validateLitterWarnLevel(rawConfig.litterWarnLevel, 'litterWarnLevel') ?? DEFAULT_LITTER_WARN_LEVEL,
       catPresentLatchSeconds:
         this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
         DEFAULT_CAT_PRESENT_LATCH_SECONDS,
@@ -414,6 +419,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       password: typeof rawConfig.password === 'string' ? rawConfig.password : rawConfig.password,
       pollInterval: effectiveDefaults.pollInterval,
       recordDays: effectiveDefaults.recordDays,
+      litterWarnLevel: effectiveDefaults.litterWarnLevel,
       catPresentLatchSeconds: effectiveDefaults.catPresentLatchSeconds,
       catVisitLatchSeconds: effectiveDefaults.catVisitLatchSeconds,
       recentlyUsedMinutes: effectiveDefaults.recentlyUsedMinutes,
@@ -481,6 +487,19 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
     if (!Number.isInteger(value) || value < MIN_RECORD_DAYS || value > MAX_RECORD_DAYS) {
       this.log.warn(`${context} must be an integer between ${MIN_RECORD_DAYS} and ${MAX_RECORD_DAYS}; using default`);
+      return undefined;
+    }
+
+    return value;
+  }
+
+  private validateLitterWarnLevel(value: LitterWarnLevel | undefined, context: string): LitterWarnLevel | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (value !== 'insufficient' && value !== 'moderate') {
+      this.log.warn(`${context} must be "insufficient" or "moderate"; ignoring`);
       return undefined;
     }
 
@@ -577,6 +596,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     const normalized: DeviceSettingsConfig = {};
     const pollInterval = this.validatePollInterval(layer.pollInterval, `${context}.pollInterval`);
     const recordDays = this.validateRecordDays(layer.recordDays, `${context}.recordDays`);
+    const litterWarnLevel = this.validateLitterWarnLevel(layer.litterWarnLevel, `${context}.litterWarnLevel`);
     const catPresentLatchSeconds = this.validateCatPresentLatchSeconds(
       layer.catPresentLatchSeconds,
       `${context}.catPresentLatchSeconds`,
@@ -589,6 +609,9 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     }
     if (recordDays !== undefined) {
       normalized.recordDays = recordDays;
+    }
+    if (litterWarnLevel !== undefined) {
+      normalized.litterWarnLevel = litterWarnLevel;
     }
     if (catPresentLatchSeconds !== undefined) {
       normalized.catPresentLatchSeconds = catPresentLatchSeconds;
@@ -670,6 +693,10 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         override.recordDays,
         `deviceOverrides[${i}].recordDays`,
       );
+      const litterWarnLevel = this.validateLitterWarnLevel(
+        override.litterWarnLevel,
+        `deviceOverrides[${i}].litterWarnLevel`,
+      );
       const catPresentLatchSeconds = this.validateCatPresentLatchSeconds(
         override.catPresentLatchSeconds,
         `deviceOverrides[${i}].catPresentLatchSeconds`,
@@ -696,6 +723,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         profile: profile && knownProfiles.has(profile) ? profile : undefined,
         ...(pollInterval !== undefined ? { pollInterval } : {}),
         ...(recordDays !== undefined ? { recordDays } : {}),
+        ...(litterWarnLevel !== undefined ? { litterWarnLevel } : {}),
         ...(catPresentLatchSeconds !== undefined ? { catPresentLatchSeconds } : {}),
         ...(catVisitLatchSeconds !== undefined ? { catVisitLatchSeconds } : {}),
         ...(recentlyUsedMinutes !== undefined ? { recentlyUsedMinutes } : {}),
@@ -744,6 +772,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     return {
       pollInterval: layer.pollInterval ?? base.pollInterval,
       recordDays: layer.recordDays ?? base.recordDays,
+      litterWarnLevel: layer.litterWarnLevel ?? base.litterWarnLevel,
       catPresentLatchSeconds: layer.catPresentLatchSeconds ?? base.catPresentLatchSeconds,
       catVisitLatchSeconds: layer.catVisitLatchSeconds ?? base.catVisitLatchSeconds,
       recentlyUsedMinutes: layer.recentlyUsedMinutes ?? base.recentlyUsedMinutes,
@@ -755,6 +784,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     const base: ResolvedDeviceConfig = {
       pollInterval: this.config.pollInterval ?? DEFAULT_POLL_INTERVAL_SECONDS,
       recordDays: this.config.recordDays ?? DEFAULT_RECORD_DAYS,
+      litterWarnLevel: this.config.litterWarnLevel ?? DEFAULT_LITTER_WARN_LEVEL,
       catPresentLatchSeconds: this.config.catPresentLatchSeconds ?? DEFAULT_CAT_PRESENT_LATCH_SECONDS,
       catVisitLatchSeconds: this.config.catVisitLatchSeconds ?? DEFAULT_CAT_VISIT_LATCH_SECONDS,
       recentlyUsedMinutes: this.config.recentlyUsedMinutes ?? DEFAULT_RECENTLY_USED_MINUTES,
@@ -787,6 +817,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       ...resolvedConfig.features,
       pollInterval: resolvedConfig.pollInterval,
       recordDays: resolvedConfig.recordDays,
+      litterWarnLevel: resolvedConfig.litterWarnLevel,
       catPresentLatchSeconds: resolvedConfig.catPresentLatchSeconds,
       catVisitLatchSeconds: resolvedConfig.catVisitLatchSeconds,
       recentlyUsedMinutes: resolvedConfig.recentlyUsedMinutes,
@@ -826,6 +857,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
   private logConfigStartupChecks(): void {
     this.log.info(
       `Startup checks: pollInterval=${this.config.pollInterval}s, recordDays=${this.config.recordDays}, ` +
+      `litterWarnLevel=${this.config.litterWarnLevel}, ` +
       `catPresentLatchSeconds=${this.config.catPresentLatchSeconds}s, catVisitLatchSeconds=${this.config.catVisitLatchSeconds}s, ` +
       `recentlyUsedMinutes=${this.config.recentlyUsedMinutes}, ` +
       `startupBehavior=${this.config.startupBehavior}, startupDelaySeconds=${this.config.startupDelaySeconds}`,
@@ -861,7 +893,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
       this.log.info(
         `- ${displayName} [${device.iotId}] hidden=${hidden} profile=${override?.profile || 'none'} ` +
-        `poll=${resolved.pollInterval}s recordDays=${resolved.recordDays} ` +
+        `poll=${resolved.pollInterval}s recordDays=${resolved.recordDays} litterWarnLevel=${resolved.litterWarnLevel} ` +
         `catPresentLatch=${resolved.catPresentLatchSeconds}s catVisitLatch=${resolved.catVisitLatchSeconds}s ` +
         `recentlyUsed=${resolved.recentlyUsedMinutes}m ` +
         `features=${enabledFeatures.length > 0 ? enabledFeatures.join(', ') : 'core-only'}`,

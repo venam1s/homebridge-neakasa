@@ -35,6 +35,16 @@
         "maximum": 30,
         "description": "How many days of cat records to fetch for Cat Weight sensors (1-30)."
       },
+      "litterWarnLevel": {
+        "title": "Litter Low Warning Level",
+        "type": "string",
+        "default": "insufficient",
+        "oneOf": [
+          { "title": "Insufficient only", "enum": ["insufficient"] },
+          { "title": "Moderate or lower", "enum": ["moderate"] }
+        ],
+        "description": "When the Home app's 'Change Filter' litter warning triggers."
+      },
       "catPresentLatchSeconds": {
         "title": "Cat Present Latch (seconds)",
         "type": "integer",
@@ -73,6 +83,14 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 30
+          },
+          "litterWarnLevel": {
+            "title": "Litter Low Warning Level",
+            "type": "string",
+            "oneOf": [
+              { "title": "Insufficient only", "enum": ["insufficient"] },
+              { "title": "Moderate or lower", "enum": ["moderate"] }
+            ]
           },
           "catPresentLatchSeconds": {
             "title": "Cat Present Latch (seconds)",
@@ -202,6 +220,14 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 30
+            },
+            "litterWarnLevel": {
+              "title": "Litter Low Warning Level",
+              "type": "string",
+              "oneOf": [
+                { "title": "Insufficient only", "enum": ["insufficient"] },
+                { "title": "Moderate or lower", "enum": ["moderate"] }
+              ]
             },
             "catPresentLatchSeconds": {
               "title": "Cat Present Latch (seconds)",
@@ -433,6 +459,15 @@
               "maximum": 30,
               "description": "Override cat record history days for this device (1-30)."
             },
+            "litterWarnLevel": {
+              "title": "Litter Low Warning Level",
+              "type": "string",
+              "oneOf": [
+                { "title": "Insufficient only", "enum": ["insufficient"] },
+                { "title": "Moderate or lower", "enum": ["moderate"] }
+              ],
+              "description": "Override litter low warning level for this device."
+            },
             "catPresentLatchSeconds": {
               "title": "Cat Present Latch (seconds)",
               "type": "integer",
@@ -636,6 +671,10 @@
           "flex": "1 1 50%"
         },
         {
+          "key": "litterWarnLevel",
+          "flex": "1 1 50%"
+        },
+        {
           "key": "catPresentLatchSeconds",
           "flex": "1 1 50%"
         },
@@ -713,6 +752,7 @@
             "deviceOverrides[].hidden",
             "deviceOverrides[].pollInterval",
             "deviceOverrides[].recordDays",
+            "deviceOverrides[].litterWarnLevel",
             "deviceOverrides[].catPresentLatchSeconds",
             "deviceOverrides[].catVisitLatchSeconds",
             "deviceOverrides[].recentlyUsedMinutes",

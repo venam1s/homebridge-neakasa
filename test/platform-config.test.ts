@@ -130,6 +130,24 @@ describe('NeakasaPlatform config sanitization', () => {
     });
   });
 
+  describe('litterWarnLevel', () => {
+    it('should use default ("insufficient") when not specified', () => {
+      const { platform } = createPlatform();
+      expect(getConfig(platform).litterWarnLevel).toBe('insufficient');
+    });
+
+    it('should accept "moderate"', () => {
+      const { platform } = createPlatform({ litterWarnLevel: 'moderate' });
+      expect(getConfig(platform).litterWarnLevel).toBe('moderate');
+    });
+
+    it('should warn and use default for invalid value', () => {
+      const { platform, log } = createPlatform({ litterWarnLevel: 'bogus' as any });
+      expect(getConfig(platform).litterWarnLevel).toBe('insufficient');
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('litterWarnLevel'));
+    });
+  });
+
   describe('catPresentLatchSeconds', () => {
     it('should use default (240) when not specified', () => {
       const { platform } = createPlatform();
@@ -395,6 +413,26 @@ describe('NeakasaPlatform config merging', () => {
     expect(resolved.features.showFaultSensor).toBe(true);
     // defaults layer set recordDays
     expect(resolved.recordDays).toBe(14);
+  });
+
+  it('should resolve litterWarnLevel through precedence (deviceOverrides wins)', () => {
+    const { platform } = createPlatform({
+      deviceOverrides: [
+        { iotId: 'device-1', litterWarnLevel: 'moderate' },
+      ],
+    });
+
+    // Top-level default applies when no override exists
+    const fallback = (platform as any).getResolvedDeviceConfig('nonexistent-device');
+    expect(fallback.litterWarnLevel).toBe('insufficient');
+
+    // deviceOverrides litterWarnLevel wins
+    const resolved = (platform as any).getResolvedDeviceConfig('device-1');
+    expect(resolved.litterWarnLevel).toBe('moderate');
+
+    // The accessory-facing config (built from the resolved config) carries it through too
+    const accessoryConfig = (platform as any).buildAccessoryConfig('device-1');
+    expect(accessoryConfig.litterWarnLevel).toBe('moderate');
   });
 });
 
