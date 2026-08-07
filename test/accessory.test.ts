@@ -774,6 +774,10 @@ describe('NeakasaAccessory', () => {
   });
 
   describe('cat visits today sensor', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('creates a HumiditySensor with the visits-today count', async () => {
       const { neakasaAccessory, accessory, C } = createAccessory({ showCatVisitCount: true });
       const now = new Date('2026-08-07T10:00:00').getTime();
@@ -794,8 +798,6 @@ describe('NeakasaAccessory', () => {
       const svc = accessory._serviceMap.get('catvisits-A');
       expect(svc).toBeDefined();
       expect(svc.updateCharacteristic).toHaveBeenCalledWith(C.CurrentRelativeHumidity, 2);
-
-      (Date.now as jest.Mock).mockRestore();
     });
 
     it('caps the visits-today value at 100', async () => {
@@ -819,8 +821,6 @@ describe('NeakasaAccessory', () => {
 
       const svc = accessory._serviceMap.get('catvisits-A');
       expect(svc.updateCharacteristic).toHaveBeenCalledWith(C.CurrentRelativeHumidity, 100);
-
-      (Date.now as jest.Mock).mockRestore();
     });
 
     it('does not create a visits-today sensor when showCatVisitCount is disabled', async () => {
