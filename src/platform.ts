@@ -408,7 +408,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       recordDays: this.validateRecordDays(rawConfig.recordDays, 'recordDays') ?? DEFAULT_RECORD_DAYS,
       litterWarnLevel:
         this.validateLitterWarnLevel(rawConfig.litterWarnLevel, 'litterWarnLevel') ?? DEFAULT_LITTER_WARN_LEVEL,
-      latestFirmwareVersion: this.validateLatestFirmwareVersion(rawConfig.latestFirmwareVersion) ?? undefined,
+      latestFirmwareVersion: this.validateLatestFirmwareVersion(rawConfig.latestFirmwareVersion),
       catPresentLatchSeconds:
         this.validateCatPresentLatchSeconds(rawConfig.catPresentLatchSeconds, 'catPresentLatchSeconds') ??
         DEFAULT_CAT_PRESENT_LATCH_SECONDS,
@@ -419,7 +419,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         this.validateNonNegativeInt(rawConfig.recentlyUsedMinutes, 'recentlyUsedMinutes') ??
         DEFAULT_RECENTLY_USED_MINUTES,
       weightAlertThreshold:
-        this.validateNonNegativeInt(rawConfig.weightAlertThreshold, 'weightAlertThreshold') ??
+        this.validatePositiveInt(rawConfig.weightAlertThreshold, 'weightAlertThreshold') ??
         DEFAULT_WEIGHT_ALERT_THRESHOLD,
       features: this.mergeFeatureConfig(this.createDefaultFeatureConfig(), rawConfig),
     };
@@ -494,6 +494,19 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
 
     if (!Number.isInteger(value) || value < 0) {
       this.log.warn(`${context} must be an integer >= 0; using default`);
+      return undefined;
+    }
+
+    return value;
+  }
+
+  private validatePositiveInt(value: number | undefined, context: string): number | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (!Number.isInteger(value) || value < 1) {
+      this.log.warn(`${context} must be a positive integer (>= 1); using default`);
       return undefined;
     }
 
@@ -631,7 +644,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
     );
     const catVisitLatchSeconds = this.validateNonNegativeInt(layer.catVisitLatchSeconds, `${context}.catVisitLatchSeconds`);
     const recentlyUsedMinutes = this.validateNonNegativeInt(layer.recentlyUsedMinutes, `${context}.recentlyUsedMinutes`);
-    const weightAlertThreshold = this.validateNonNegativeInt(layer.weightAlertThreshold, `${context}.weightAlertThreshold`);
+    const weightAlertThreshold = this.validatePositiveInt(layer.weightAlertThreshold, `${context}.weightAlertThreshold`);
 
     if (pollInterval !== undefined) {
       normalized.pollInterval = pollInterval;
@@ -745,7 +758,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
         override.recentlyUsedMinutes,
         `deviceOverrides[${i}].recentlyUsedMinutes`,
       );
-      const weightAlertThreshold = this.validateNonNegativeInt(
+      const weightAlertThreshold = this.validatePositiveInt(
         override.weightAlertThreshold,
         `deviceOverrides[${i}].weightAlertThreshold`,
       );
@@ -829,7 +842,7 @@ export class NeakasaPlatform implements DynamicPlatformPlugin {
       pollInterval: this.config.pollInterval ?? DEFAULT_POLL_INTERVAL_SECONDS,
       recordDays: this.config.recordDays ?? DEFAULT_RECORD_DAYS,
       litterWarnLevel: this.config.litterWarnLevel ?? DEFAULT_LITTER_WARN_LEVEL,
-      latestFirmwareVersion: this.config.latestFirmwareVersion ?? undefined,
+      latestFirmwareVersion: this.config.latestFirmwareVersion,
       catPresentLatchSeconds: this.config.catPresentLatchSeconds ?? DEFAULT_CAT_PRESENT_LATCH_SECONDS,
       catVisitLatchSeconds: this.config.catVisitLatchSeconds ?? DEFAULT_CAT_VISIT_LATCH_SECONDS,
       recentlyUsedMinutes: this.config.recentlyUsedMinutes ?? DEFAULT_RECENTLY_USED_MINUTES,

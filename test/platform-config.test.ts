@@ -194,6 +194,17 @@ describe('NeakasaPlatform config sanitization', () => {
       expect(getConfig(platform).weightAlertThreshold).toBe(15);
       expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('weightAlertThreshold'));
     });
+
+    it('should warn and use default for 0 (matches schema minimum of 1)', () => {
+      const { platform, log } = createPlatform({ weightAlertThreshold: 0 });
+      expect(getConfig(platform).weightAlertThreshold).toBe(15);
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('weightAlertThreshold'));
+    });
+
+    it('should accept a valid weightAlertThreshold of 20', () => {
+      const { platform } = createPlatform({ weightAlertThreshold: 20 });
+      expect(getConfig(platform).weightAlertThreshold).toBe(20);
+    });
   });
 
   describe('showCatWeightAlert', () => {

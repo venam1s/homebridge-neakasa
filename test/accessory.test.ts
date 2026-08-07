@@ -361,6 +361,19 @@ describe('NeakasaAccessory', () => {
       );
     });
 
+    it('does not warn at SUFFICIENT when litterWarnLevel is moderate', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory({ litterWarnLevel: 'moderate' });
+      const data = createDeviceData({ sandLevelState: SandLevel.SUFFICIENT });
+
+      await neakasaAccessory.updateData(data);
+
+      const filterService = accessory._serviceMap.get('sand-level')!;
+      expect(filterService.updateCharacteristic).toHaveBeenCalledWith(
+        C.FilterChangeIndication,
+        C.FilterChangeIndication.FILTER_OK,
+      );
+    });
+
     it('should set status to active during cleaning', async () => {
       const { neakasaAccessory, accessory } = createAccessory();
       const data = createDeviceData({ bucketStatus: 1 }); // Cleaning

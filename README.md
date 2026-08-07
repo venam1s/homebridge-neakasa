@@ -93,7 +93,7 @@ Enable `showCatWeightAlert` to add a per-cat Contact Sensor ("`<cat>` Weight Ale
 
 #### Cat Visits Today
 
-Enable `showCatVisitCount` to add a per-cat Humidity Sensor ("`<cat>` Visits Today") whose value is the number of recorded visits for that cat since local midnight (capped at 100). It resets naturally the next day once new visits start being recorded after midnight.
+Enable `showCatVisitCount` to add a per-cat Humidity Sensor ("`<cat>` Visits Today") whose value is the number of recorded visits for that cat since local midnight (capped at 100). The count is recomputed on each poll and drops to 0 at the first poll after local midnight.
 
 ```json
 {
