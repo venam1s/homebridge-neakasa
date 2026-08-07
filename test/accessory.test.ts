@@ -628,6 +628,22 @@ describe('NeakasaAccessory', () => {
         C.ContactSensorState.CONTACT_DETECTED,
       );
     });
+
+    it('keeps firmware sensor closed when device firmware is unknown', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory(
+        { showFirmwareUpdateSensor: true, latestFirmwareVersion: '2.0.0' },
+        {},
+      );
+      const data = createDeviceData();
+
+      await neakasaAccessory.updateData(data);
+
+      const fwSensor = accessory._serviceMap.get('firmware-update')!;
+      expect(fwSensor.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_DETECTED,
+      );
+    });
   });
 
   describe('switch handlers', () => {

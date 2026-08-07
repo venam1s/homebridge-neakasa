@@ -51,10 +51,13 @@ For detailed behavior of every switch and sensor (including automation examples)
 | **Recently Used** | Occupancy Sensor | Indicates the litter box was used within a recent time window |
 | **Sand Level State** | Contact Sensor | Detailed level (Insufficient, Moderate, Sufficient, Overfilled) |
 | **Fault Alert** | Motion Sensor | Alerts when the device is stuck or faulted (Panels Missing, Interrupted) |
+| **Firmware Update Available** | Contact Sensor | Opens when the device's reported firmware differs from the configured `latestFirmwareVersion` |
 
 > **Note:** WiFi Signal and Cat Weight sensors appear as Humidity Sensors in HomeKit because HomeKit has no generic number sensor type. This is a common Homebridge workaround.
 
 > **Note:** The Fault Alert sensor uses Motion Sensor — "motion detected" means a fault is active. Use it to trigger HomeKit notifications or automations when the device jams or loses its panels.
+
+> **Note:** The Firmware Update Available sensor is config-based, not a live check against Neakasa's servers. Set `latestFirmwareVersion` manually (e.g. after checking release notes); the sensor compares it to the device's reported firmware version as of the last Homebridge restart/discovery.
 
 > **Note:** `Run Clean Cycle` and `Run Leveling` are intentionally momentary action switches. They reset back to off right after the command is sent and are blocked when `Cat Present` is active.
 
