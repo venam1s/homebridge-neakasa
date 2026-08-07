@@ -21,6 +21,7 @@ export interface FeatureVisibilityConfig {
   showRecentlyUsedSensor: boolean;
   showSandLevelSensor: boolean;
   showFaultSensor: boolean;
+  showFirmwareUpdateSensor: boolean;
   useImperialUnits: boolean;
 }
 
@@ -28,6 +29,7 @@ export interface DeviceSettingsConfig extends Partial<FeatureVisibilityConfig> {
   pollInterval?: number;
   recordDays?: number;
   litterWarnLevel?: LitterWarnLevel;
+  latestFirmwareVersion?: string;
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;
@@ -47,6 +49,7 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   pollInterval?: number;
   recordDays?: number;
   litterWarnLevel?: LitterWarnLevel;
+  latestFirmwareVersion?: string;
   catPresentLatchSeconds?: number;
   catVisitLatchSeconds?: number;
   recentlyUsedMinutes?: number;
@@ -78,6 +81,8 @@ export interface NeakasaPlatformConfig extends PlatformConfig {
   useImperialUnits?: boolean;
   // Fault sensor
   showFaultSensor?: boolean;
+  // Firmware update sensor
+  showFirmwareUpdateSensor?: boolean;
 }
 
 export interface NeakasaDevice {

@@ -45,6 +45,11 @@
         ],
         "description": "When the Home app's 'Change Filter' litter warning triggers."
       },
+      "latestFirmwareVersion": {
+        "title": "Latest Known Firmware Version",
+        "type": "string",
+        "description": "If set and the device firmware differs, the Firmware Update sensor opens. Update this manually when Neakasa releases new firmware."
+      },
       "catPresentLatchSeconds": {
         "title": "Cat Present Latch (seconds)",
         "type": "integer",
@@ -91,6 +96,10 @@
               { "title": "Insufficient only", "enum": ["insufficient"] },
               { "title": "Moderate or lower", "enum": ["moderate"] }
             ]
+          },
+          "latestFirmwareVersion": {
+            "title": "Latest Known Firmware Version",
+            "type": "string"
           },
           "catPresentLatchSeconds": {
             "title": "Cat Present Latch (seconds)",
@@ -171,6 +180,10 @@
             "title": "Fault Sensor",
             "type": "boolean"
           },
+          "showFirmwareUpdateSensor": {
+            "title": "Firmware Update Sensor",
+            "type": "boolean"
+          },
           "useImperialUnits": {
             "title": "Use Imperial Units (lbs)",
             "type": "boolean"
@@ -196,6 +209,7 @@
               "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
               "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
               "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
+              "showFirmwareUpdateSensor": { "title": "Firmware Update Sensor", "type": "boolean" },
               "useImperialUnits": { "title": "Use Imperial Units (lbs)", "type": "boolean" }
             }
           }
@@ -229,6 +243,10 @@
                 { "title": "Moderate or lower", "enum": ["moderate"] }
               ]
             },
+            "latestFirmwareVersion": {
+              "title": "Latest Known Firmware Version",
+              "type": "string"
+            },
             "catPresentLatchSeconds": {
               "title": "Cat Present Latch (seconds)",
               "type": "integer",
@@ -260,6 +278,7 @@
             "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
             "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
             "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
+            "showFirmwareUpdateSensor": { "title": "Firmware Update Sensor", "type": "boolean" },
             "useImperialUnits": { "title": "Use Imperial Units (lbs)", "type": "boolean" },
             "features": {
               "title": "Feature Overrides",
@@ -282,6 +301,7 @@
                 "showRecentlyUsedSensor": { "title": "Recently Used Sensor", "type": "boolean" },
                 "showSandLevelSensor": { "title": "Sand Level Sensor", "type": "boolean" },
                 "showFaultSensor": { "title": "Fault Sensor", "type": "boolean" },
+                "showFirmwareUpdateSensor": { "title": "Firmware Update Sensor", "type": "boolean" },
                 "useImperialUnits": { "title": "Use Imperial Units (lbs)", "type": "boolean" }
               }
             }
@@ -409,6 +429,12 @@
         "default": false,
         "description": "Alerts when the device is stuck or has a fault (Panels Missing or Interrupted). Shows as a Motion Sensor in HomeKit — motion detected means a fault is active."
       },
+      "showFirmwareUpdateSensor": {
+        "title": "Firmware Update Available Sensor",
+        "type": "boolean",
+        "default": false,
+        "description": "Alerts when the device firmware differs from Latest Known Firmware Version. Shows as a Contact Sensor in HomeKit — open means an update is available."
+      },
       "useImperialUnits": {
         "title": "Use Imperial Units (lbs)",
         "type": "boolean",
@@ -467,6 +493,11 @@
                 { "title": "Moderate or lower", "enum": ["moderate"] }
               ],
               "description": "Override litter low warning level for this device."
+            },
+            "latestFirmwareVersion": {
+              "title": "Latest Known Firmware Version",
+              "type": "string",
+              "description": "Override latest known firmware version for this device."
             },
             "catPresentLatchSeconds": {
               "title": "Cat Present Latch (seconds)",
@@ -550,6 +581,10 @@
               "title": "Fault Sensor",
               "type": "boolean"
             },
+            "showFirmwareUpdateSensor": {
+              "title": "Firmware Update Sensor",
+              "type": "boolean"
+            },
             "useImperialUnits": {
               "title": "Use Imperial Units (lbs)",
               "type": "boolean"
@@ -624,6 +659,10 @@
                   "title": "Fault Sensor",
                   "type": "boolean"
                 },
+                "showFirmwareUpdateSensor": {
+                  "title": "Firmware Update Sensor",
+                  "type": "boolean"
+                },
                 "useImperialUnits": {
                   "title": "Use Imperial Units (lbs)",
                   "type": "boolean"
@@ -672,6 +711,10 @@
         },
         {
           "key": "litterWarnLevel",
+          "flex": "1 1 50%"
+        },
+        {
+          "key": "latestFirmwareVersion",
           "flex": "1 1 50%"
         },
         {
@@ -734,7 +777,8 @@
         "showCatVisitSensor",
         "showRecentlyUsedSensor",
         "showSandLevelSensor",
-        "showFaultSensor"
+        "showFaultSensor",
+        "showFirmwareUpdateSensor"
       ]
     },
     {
@@ -753,6 +797,7 @@
             "deviceOverrides[].pollInterval",
             "deviceOverrides[].recordDays",
             "deviceOverrides[].litterWarnLevel",
+            "deviceOverrides[].latestFirmwareVersion",
             "deviceOverrides[].catPresentLatchSeconds",
             "deviceOverrides[].catVisitLatchSeconds",
             "deviceOverrides[].recentlyUsedMinutes",
@@ -777,6 +822,7 @@
                 "deviceOverrides[].showRecentlyUsedSensor",
                 "deviceOverrides[].showSandLevelSensor",
                 "deviceOverrides[].showFaultSensor",
+                "deviceOverrides[].showFirmwareUpdateSensor",
                 "deviceOverrides[].useImperialUnits"
               ]
             }

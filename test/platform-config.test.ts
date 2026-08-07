@@ -148,6 +148,18 @@ describe('NeakasaPlatform config sanitization', () => {
     });
   });
 
+  describe('latestFirmwareVersion', () => {
+    it('should be undefined when not specified', () => {
+      const { platform } = createPlatform();
+      expect(getConfig(platform).latestFirmwareVersion).toBeUndefined();
+    });
+
+    it('should accept a valid string', () => {
+      const { platform } = createPlatform({ latestFirmwareVersion: '2.1.0' });
+      expect(getConfig(platform).latestFirmwareVersion).toBe('2.1.0');
+    });
+  });
+
   describe('catPresentLatchSeconds', () => {
     it('should use default (240) when not specified', () => {
       const { platform } = createPlatform();
@@ -192,6 +204,7 @@ describe('NeakasaPlatform config sanitization', () => {
       expect(config.showEmptyBin).toBe(false);
       expect(config.showCatSensors).toBe(false);
       expect(config.showFaultSensor).toBe(false);
+      expect(config.showFirmwareUpdateSensor).toBe(false);
       expect(config.useImperialUnits).toBe(false);
     });
 
@@ -433,6 +446,27 @@ describe('NeakasaPlatform config merging', () => {
     // The accessory-facing config (built from the resolved config) carries it through too
     const accessoryConfig = (platform as any).buildAccessoryConfig('device-1');
     expect(accessoryConfig.litterWarnLevel).toBe('moderate');
+  });
+
+  it('should resolve latestFirmwareVersion through precedence (deviceOverrides wins)', () => {
+    const { platform } = createPlatform({
+      latestFirmwareVersion: '1.0.0',
+      deviceOverrides: [
+        { iotId: 'device-1', latestFirmwareVersion: '2.0.0' },
+      ],
+    });
+
+    // Top-level value applies when no override exists
+    const fallback = (platform as any).getResolvedDeviceConfig('nonexistent-device');
+    expect(fallback.latestFirmwareVersion).toBe('1.0.0');
+
+    // deviceOverrides latestFirmwareVersion wins
+    const resolved = (platform as any).getResolvedDeviceConfig('device-1');
+    expect(resolved.latestFirmwareVersion).toBe('2.0.0');
+
+    // The accessory-facing config (built from the resolved config) carries it through too
+    const accessoryConfig = (platform as any).buildAccessoryConfig('device-1');
+    expect(accessoryConfig.latestFirmwareVersion).toBe('2.0.0');
   });
 });
 

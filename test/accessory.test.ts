@@ -90,7 +90,7 @@ function createMockPlatform(configOverrides: Partial<NeakasaPlatformConfig> = {}
   };
 }
 
-function createMockAccessory() {
+function createMockAccessory(device: any = {}) {
   const serviceMap = new Map<string, any>();
   const servicesArray: any[] = [];
 
@@ -102,7 +102,7 @@ function createMockAccessory() {
     services: servicesArray,
     // Expose map for test assertions
     _serviceMap: serviceMap,
-    get context() { return { device: {} }; },
+    context: { device },
     getService: jest.fn((nameOrSubtype: string) => serviceMap.get(nameOrSubtype)),
     addService: jest.fn((_type: string, _name: string, subtype: string) => {
       const svc = createMockService(subtype);
@@ -149,6 +149,7 @@ function createDefaultConfig(overrides: Partial<NeakasaPlatformConfig> = {}): Ne
     showRecentlyUsedSensor: false,
     showSandLevelSensor: false,
     showFaultSensor: false,
+    showFirmwareUpdateSensor: false,
     useImperialUnits: false,
     ...overrides,
   } as NeakasaPlatformConfig;
@@ -178,9 +179,9 @@ function createDeviceData(overrides: Partial<DeviceData> = {}): DeviceData {
   };
 }
 
-function createAccessory(configOverrides: Partial<NeakasaPlatformConfig> = {}) {
+function createAccessory(configOverrides: Partial<NeakasaPlatformConfig> = {}, device: any = {}) {
   const platform = createMockPlatform(configOverrides);
-  const accessory = createMockAccessory();
+  const accessory = createMockAccessory(device);
   const config = createDefaultConfig(configOverrides);
   const neakasaAccessory = new NeakasaAccessory(
     platform as any,
@@ -232,6 +233,7 @@ describe('NeakasaAccessory', () => {
       expect(serviceNames).not.toContain('cat-visit');
       expect(serviceNames).not.toContain('recently-used');
       expect(serviceNames).not.toContain('auto-level-clean');
+      expect(serviceNames).not.toContain('firmware-update');
     });
 
     it('should create child lock service when enabled', () => {
@@ -271,6 +273,7 @@ describe('NeakasaAccessory', () => {
         showFaultSensor: true,
         showCatVisitSensor: true,
         showRecentlyUsedSensor: true,
+        showFirmwareUpdateSensor: true,
       });
       expect(accessory._serviceMap.has('bin-state')).toBe(true);
       expect(accessory._serviceMap.has('wifi-signal')).toBe(true);
@@ -278,6 +281,7 @@ describe('NeakasaAccessory', () => {
       expect(accessory._serviceMap.has('fault-alert')).toBe(true);
       expect(accessory._serviceMap.has('cat-visit')).toBe(true);
       expect(accessory._serviceMap.has('recently-used')).toBe(true);
+      expect(accessory._serviceMap.has('firmware-update')).toBe(true);
     });
   });
 
@@ -575,6 +579,54 @@ describe('NeakasaAccessory', () => {
 
       const sandSensor = accessory._serviceMap.get('sand-level-state')!;
       expect(sandSensor.updateCharacteristic).toHaveBeenCalledWith('Name', 'Overfilled');
+    });
+
+    it('opens firmware sensor when latestFirmwareVersion differs', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory(
+        { showFirmwareUpdateSensor: true, latestFirmwareVersion: '2.0.0' },
+        { firmwareVersion: '1.0.0' },
+      );
+      const data = createDeviceData();
+
+      await neakasaAccessory.updateData(data);
+
+      const fwSensor = accessory._serviceMap.get('firmware-update')!;
+      expect(fwSensor.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_NOT_DETECTED,
+      );
+    });
+
+    it('keeps firmware sensor closed when versions match', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory(
+        { showFirmwareUpdateSensor: true, latestFirmwareVersion: '1.0.0' },
+        { firmwareVersion: '1.0.0' },
+      );
+      const data = createDeviceData();
+
+      await neakasaAccessory.updateData(data);
+
+      const fwSensor = accessory._serviceMap.get('firmware-update')!;
+      expect(fwSensor.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_DETECTED,
+      );
+    });
+
+    it('keeps firmware sensor closed when latestFirmwareVersion unset', async () => {
+      const { neakasaAccessory, accessory, C } = createAccessory(
+        { showFirmwareUpdateSensor: true },
+        { firmwareVersion: '1.0.0' },
+      );
+      const data = createDeviceData();
+
+      await neakasaAccessory.updateData(data);
+
+      const fwSensor = accessory._serviceMap.get('firmware-update')!;
+      expect(fwSensor.updateCharacteristic).toHaveBeenCalledWith(
+        C.ContactSensorState,
+        C.ContactSensorState.CONTACT_DETECTED,
+      );
     });
   });
 

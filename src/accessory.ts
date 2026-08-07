@@ -207,6 +207,15 @@ export class NeakasaAccessory {
       this.removeServiceIfExists('fault-alert');
     }
 
+    if (this.config.showFirmwareUpdateSensor === true) {
+      const fwSensor = this.accessory.getService('firmware-update') ||
+        this.accessory.addService(this.platform.Service.ContactSensor, 'Firmware Update Available', 'firmware-update');
+      this.setServiceName(fwSensor, 'Firmware Update Available');
+      this.services.set('firmwareUpdate', fwSensor);
+    } else {
+      this.removeServiceIfExists('firmware-update');
+    }
+
     if (this.config.showCatVisitSensor === true) {
       const catVisitSensor = this.accessory.getService('cat-visit') ||
         this.accessory.addService(this.platform.Service.ContactSensor, 'Cat Visit', 'cat-visit');
@@ -559,6 +568,21 @@ export class NeakasaAccessory {
       if (isFaulted) {
         this.platform.log.warn(`${this.deviceName} fault: ${BucketStatus[data.bucketStatus]}`);
       }
+    }
+
+    // Optional: Firmware Update Available sensor
+    const fwSensor = this.services.get('firmwareUpdate');
+    if (fwSensor) {
+      const current = this.accessory.context.device?.firmwareVersion;
+      const latest = this.config.latestFirmwareVersion;
+      const updateAvailable = !!current && !!latest && current !== latest;
+      this.updateIfChanged(
+        fwSensor,
+        this.platform.Characteristic.ContactSensorState,
+        updateAvailable ?
+          this.platform.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED :
+          this.platform.Characteristic.ContactSensorState.CONTACT_DETECTED,
+      );
     }
 
     // Optional: Cat Weight sensors
