@@ -962,9 +962,10 @@ export class NeakasaAccessory {
         `Empty Bin confirmation armed for ${this.deviceName}. ` +
         `Tap "Empty Bin" again within ${confirmSeconds}s to confirm.`,
       );
+      // unref() so this momentary reset timer never keeps the process (or a test worker) alive.
       setTimeout(() => {
         emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);
-      }, 800);
+      }, 800).unref();
       return;
     }
 
@@ -974,7 +975,7 @@ export class NeakasaAccessory {
       this.emptyBinConfirmUntil = 0;
       setTimeout(() => {
         emptyBinSwitch.updateCharacteristic(this.platform.Characteristic.On, false);
-      }, 800);
+      }, 800).unref();
     } catch (error) {
       this.emptyBinConfirmUntil = 0;
       this.platform.log.error(`Failed to mark bin as emptied: ${error}`);

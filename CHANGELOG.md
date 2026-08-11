@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.0] - 2026-08-10
+
+### Added
+- Per-cat weight-trend health alert sensor — flags a cat whose weight drops beyond the configured `weightAlertThreshold`.
+- Per-cat visits-today counter sensor.
+- Firmware-update-available sensor (config-based version comparison).
+- Firmware version is now read from the device API response, logged, and surfaced.
+- Configurable litter low-warning level (`insufficient` | `moderate`).
+
+### Fixed
+- Security: patched transitive `axios` / `follow-redirects` / `form-data` advisories.
+- Security: masked the password field in config and documented the vendor-locked cipher.
+- Aligned `weightAlertThreshold` validation with the config schema and corrected the docs.
+- Fixed a Jest worker-teardown leak: the Empty Bin auto-reset timers are now `unref()`'d so the process (and test workers) exit cleanly.
+
+### Changed
+- Generalized per-cat service cleanup to all managed service prefixes.
+- Removed the unused `playwright` dependency.
+- CI: added npm caching and corrected the publish job's Node version.
+
+### Tests
+- Added transport-layer coverage for `client.ts` (`doRequest` / `doRequestRaw`), now 100%.
+- Added device-layer and `connect()` orchestration coverage for `api.ts` (14% → 57%).
+- Overall statement coverage 58% → 68%; suite 168 → 194 tests.
+
 ## [1.12.0] - 2026-04-09
 
 ### Added

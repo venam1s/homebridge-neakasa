@@ -986,6 +986,10 @@ describe('NeakasaAccessory', () => {
   });
 
   describe('empty bin confirmation', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('should require double-tap to confirm empty bin', async () => {
       const { neakasaAccessory, platform } = createAccessory({ showEmptyBin: true });
 
@@ -997,6 +1001,18 @@ describe('NeakasaAccessory', () => {
       // Second tap within window confirms
       await (neakasaAccessory as any).emptyBin(true);
       expect(platform.neakasaApi.emptyBin).toHaveBeenCalledWith('test-iot-id');
+    });
+
+    it('should auto-reset the Empty Bin switch to false 800ms after arming', async () => {
+      jest.useFakeTimers();
+      const { neakasaAccessory } = createAccessory({ showEmptyBin: true });
+      const emptyBinSwitch = (neakasaAccessory as any).services.get('emptyBin');
+
+      await (neakasaAccessory as any).emptyBin(true);
+      expect(emptyBinSwitch.updateCharacteristic).not.toHaveBeenCalledWith('On', false);
+
+      jest.advanceTimersByTime(800);
+      expect(emptyBinSwitch.updateCharacteristic).toHaveBeenCalledWith('On', false);
     });
   });
 
